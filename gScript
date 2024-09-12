@@ -1,0 +1,46 @@
+//https://script.google.com/macros/s/AKfycbzdaV09fHKI9EXjSGqsvhULyvYjJPMojpT9nuZ_rPohTW9qkC3sdaBKCO7EEyIpOlHW/exec
+var ss = SpreadsheetApp.openById('10filLrz145Xd96YkYSqUdl3B7aZ8avuXD2XIyAMyIGU');
+var sheet = ss.getSheetByName('Sheet1');
+
+
+function doPost(e)
+{
+  var val = e.parameter.value;
+  
+  if (e.parameter.value !== undefined){
+    var range = sheet.getRange('A2');
+    range.setValue(val);
+  }
+}
+
+function doGet(e)
+{
+  var read = e.parameter.read;
+  
+  var range = sheet.getRange('A9');
+  var vrednost = sheet.getRange('A9').getValue();
+
+  if(vrednost==(sheet.getRange('A14').getValue()-1))
+  {
+    range.setValue(-1); //zato da bo inkrementirana vrednost 0 -> začetek
+    sheet.getRange('A11').setValue(1); //da vemo da je zadeva dokončala obdelavo
+  
+  }
+  if(sheet.getRange('A11').getValue()!==1)
+  {
+    range.setValue(vrednost+1);
+    if (read !== undefined)
+    {
+      return ContentService.createTextOutput(sheet.getRange('C'+sheet.getRange('A3').getValue()).getValue());
+    }
+  }
+  else if(sheet.getRange('A11').getValue()==1 && sheet.getRange('A18').getValue()==0)
+  {
+    sheet.getRange('A18').setValue(1);
+    return ContentService.createTextOutput(sheet.getRange('E3').getValue());
+  }
+  else
+  {
+    return ContentService.createTextOutput(-1);
+  }
+}
