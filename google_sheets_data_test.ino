@@ -1,0 +1,116 @@
+//Deployment code:
+//AKfycbxZ6U2Afg7i92aL91parhMBiAG7RL4J4UDH6ZdVWtUbktdmV2u6uC8lGxvphJVRBMnQ
+
+
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library
+#include <SPI.h>
+
+
+//Things to change
+const char * ssid = "ALHN-F4DA";
+const char * password = "c57nvgLUA2";
+String GOOGLE_SCRIPT_ID = "AKfycbxthn0D81Pdln1UvdInSiHdrAl5lZZhwWv0v3nLfKCvYEkKdY-tlO8prBDzzCjaFC8";
+
+const int sendInterval = 100; 
+/********************************************************************************/
+  #define TFT_CS         5  //case select connect to pin 5
+  #define TFT_RST        25 //reset connect to pin 15
+  #define TFT_DC         27 //AO connect to pin 32  (not sure that this is really used)  try pin 25
+  #define TFT_MOSI       23 //Data = SDA connect to pin 23
+  #define TFT_SCLK       18 //Clock = SCK connect to pin 18
+  #define TFT_LED        26 
+//Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
+
+
+
+WiFiClientSecure client;
+
+
+
+void setup() {
+  //tft.initR(INITR_BLACKTAB);
+  //tft.setRotation(0);
+  //tft.fillScreen(ST7735_BLACK);
+  Serial.begin(115200);
+  delay(10);
+
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  Serial.println("Started");
+  Serial.print("Connecting");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  
+Serial.println("Ready to go");
+//testdrawstyles();
+}
+
+void loop() {
+  spreadsheet_comm();
+  delay(sendInterval);
+}
+
+void spreadsheet_comm(void) {
+   HTTPClient http;
+   String url="https://script.google.com/macros/s/"+GOOGLE_SCRIPT_ID+"/exec?read";
+//   Serial.print(url);
+  Serial.print("Making a request  ");
+  http.begin(url.c_str()); //Specify the URL and certificate
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  int httpCode = http.GET();
+  String payload;
+    if (httpCode > 0) { //Check for the returning code
+        payload = http.getString();
+        
+        //Serial.println(httpCode);
+        Serial.println(payload);
+
+        if(payload.length()>20)
+        {
+          for(int a=0;a<120;a++)
+          {
+            Serial.print(payload.substring(a*8,a*8+6));
+            Serial.print("  ");
+            Serial.println(string2header(payload.substring(a*8+2,a*8+6)); 
+            //vzame samo kar je za 0x
+          }
+        }
+        
+        //tft.println(payload);
+      }
+    else {
+      Serial.println("Error on HTTP request");
+    }
+  http.end();
+}
+
+void string2header(char *s) //TEST!!!
+{
+    int x = 0;
+  for(;;) {
+    char c = *s;
+    if (c >= '0' && c <= '9') {
+      x *= 16;
+      x += c - '0'; 
+    }
+    else if (c >= 'A' && c <= 'F') {
+      x *= 16;
+      x += (c - 'A') + 10; 
+    }
+    else if (c >= 'a' && c <= 'f') {
+      x *= 16;
+      x += (c - 'a') + 10;
+    }
+    else break;
+    s++;
+  }
+  return x;
+}
