@@ -11,8 +11,8 @@
 
 
 //Things to change
-const char * ssid = "ALHN-F4DA";
-const char * password = "c57nvgLUA2";
+const char * ssid = "zavod404";
+const char * password = "zavod404";
 String GOOGLE_SCRIPT_ID = "AKfycbxthn0D81Pdln1UvdInSiHdrAl5lZZhwWv0v3nLfKCvYEkKdY-tlO8prBDzzCjaFC8";
 
 const int sendInterval = 100; 
@@ -27,7 +27,7 @@ const int sendInterval = 100;
 
 
 
-WiFiClientSecure client;
+//WiFiClientSecure client;
 
 
 
@@ -77,9 +77,16 @@ void spreadsheet_comm(void) {
         {
           for(int a=0;a<120;a++)
           {
-            Serial.print(payload.substring(a*8,a*8+6));
+            Serial.print(payload.substring(a*8+2,a*8+4+2));
             Serial.print("  ");
-            Serial.println(string2header(payload.substring(a*8+2,a*8+6)); 
+            char beseda[4];
+            String payload_temp=payload.substring(a*8+2,a*8+4+2);
+            payload_temp.toCharArray(beseda,4);
+            //payload.substring(a*8+2,a*8+6+2);
+            Serial.println(string2header(beseda));
+            //int num = (int)strtol(hex, NULL, 16);
+            //Serial.print("   ");
+            //Serial.println(num); 
             //vzame samo kar je za 0x
           }
         }
@@ -92,25 +99,34 @@ void spreadsheet_comm(void) {
   http.end();
 }
 
-void string2header(char *s) //TEST!!!
+int string2header(char *s) //TEST!!!
 {
     int x = 0;
-  for(;;) {
+    uint8_t cnt=4;
+  while(cnt!=0) {
+    cnt--;
+    //Serial.print(cnt);
+    //Serial.print(" ");
     char c = *s;
+    Serial.print(c);
+    //Serial.print(" ");
+    //Serial.println()
     if (c >= '0' && c <= '9') {
-      x *= 16;
-      x += c - '0'; 
+     // x *= pow(16,cnt);
+      x += (c - '0')*pow(16,cnt); 
     }
     else if (c >= 'A' && c <= 'F') {
-      x *= 16;
-      x += (c - 'A') + 10; 
+     // x *= 16;
+      x += ((c - 'A') + 10)*pow(16,cnt); 
     }
     else if (c >= 'a' && c <= 'f') {
-      x *= 16;
-      x += (c - 'a') + 10;
+     // x *= 16;
+      x += ((c - 'a') + 10)*pow(16,cnt);
     }
     else break;
+    //Serial.println(x);
     s++;
+    
   }
   return x;
 }
