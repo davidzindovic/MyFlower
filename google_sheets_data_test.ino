@@ -1,7 +1,8 @@
 //Deployment code:
 //AKfycbxZ6U2Afg7i92aL91parhMBiAG7RL4J4UDH6ZdVWtUbktdmV2u6uC8lGxvphJVRBMnQ
 
-
+//probi narest tko da mas 7x array in ob bootu prebere gSheets pa jih zafila
+// sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -11,8 +12,8 @@
 
 
 //Things to change
-const char * ssid = "zavod404";
-const char * password = "zavod404";
+const char * ssid = "monika";
+const char * password = "mladizmaji";
 String GOOGLE_SCRIPT_ID = "AKfycbxthn0D81Pdln1UvdInSiHdrAl5lZZhwWv0v3nLfKCvYEkKdY-tlO8prBDzzCjaFC8";
 
 const int sendInterval = 100; 
@@ -79,9 +80,9 @@ void spreadsheet_comm(void) {
           {
             Serial.print(payload.substring(a*8+2,a*8+4+2));
             Serial.print("  ");
-            char beseda[4];
+            char beseda[5];
             String payload_temp=payload.substring(a*8+2,a*8+4+2);
-            payload_temp.toCharArray(beseda,4);
+            payload_temp.toCharArray(beseda,5);
             //payload.substring(a*8+2,a*8+6+2);
             Serial.println(string2header(beseda));
             //int num = (int)strtol(hex, NULL, 16);
