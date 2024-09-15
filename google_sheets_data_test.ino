@@ -1,8 +1,12 @@
 //Deployment code:
 //AKfycbxZ6U2Afg7i92aL91parhMBiAG7RL4J4UDH6ZdVWtUbktdmV2u6uC8lGxvphJVRBMnQ
 
-//probi narest tko da mas 7x array in ob bootu prebere gSheets pa jih zafila
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
+
+//to do: update po dnevih, kdaj potegne dol nov data (NTP)
+//nujno test če zapiše stvari pravilno v img_buffer
+//test če lahko zapisano prikaže
+
 
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -30,42 +34,16 @@ const int sendInterval = 100;
 
 #define IME_SLIKE 10 // slika1\r\n vzame prvih 10 znakov
 
+String imena_dir[8]=["/slika1.txt","/slika2.txt","/slika3.txt","/slika4.txt","/slika5.txt","/slika6.txt","/slika7.txt"];
+
+int img_buffer[161][121];
+
 //WiFiClientSecure client;
 
 bool spiffs_flag=1;
 
 #define FORMAT_SPIFFS_IF_FAILED true
 
-void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
-  Serial.printf("Listing directory: %s\r\n", dirname);
-
-  File root = fs.open(dirname);
-  if (!root) {
-    Serial.println("- failed to open directory");
-    return;
-  }
-  if (!root.isDirectory()) {
-    Serial.println(" - not a directory");
-    return;
-  }
-
-  File file = root.openNextFile();
-  while (file) {
-    if (file.isDirectory()) {
-      Serial.print("  DIR : ");
-      Serial.println(file.name());
-      if (levels) {
-        listDir(fs, file.path(), levels - 1);
-      }
-    } else {
-      Serial.print("  FILE: ");
-      Serial.print(file.name());
-      Serial.print("\tSIZE: ");
-      Serial.println(file.size());
-    }
-    file = root.openNextFile();
-  }
-}
 
 void readFile(fs::FS &fs, const char *path) {
   Serial.printf("Reading file: %s\r\n", path);
@@ -115,75 +93,12 @@ void appendFile(fs::FS &fs, const char *path, String message) {
   file.close();
 }
 
-void renameFile(fs::FS &fs, const char *path1, const char *path2) {
-  Serial.printf("Renaming file %s to %s\r\n", path1, path2);
-  if (fs.rename(path1, path2)) {
-    Serial.println("- file renamed");
-  } else {
-    Serial.println("- rename failed");
-  }
-}
-
 void deleteFile(fs::FS &fs, const char *path) {
   Serial.printf("Deleting file: %s\r\n", path);
   if (fs.remove(path)) {
     Serial.println("- file deleted");
   } else {
     Serial.println("- delete failed");
-  }
-}
-
-void testFileIO(fs::FS &fs, const char *path) {
-  Serial.printf("Testing file I/O with %s\r\n", path);
-
-  static uint8_t buf[512];
-  size_t len = 0;
-  File file = fs.open(path, FILE_WRITE);
-  if (!file) {
-    Serial.println("- failed to open file for writing");
-    return;
-  }
-
-  size_t i;
-  Serial.print("- writing");
-  uint32_t start = millis();
-  for (i = 0; i < 2048; i++) {
-    if ((i & 0x001F) == 0x001F) {
-      Serial.print(".");
-    }
-    file.write(buf, 512);
-  }
-  Serial.println("");
-  uint32_t end = millis() - start;
-  Serial.printf(" - %u bytes written in %lu ms\r\n", 2048 * 512, end);
-  file.close();
-
-  file = fs.open(path);
-  start = millis();
-  end = start;
-  i = 0;
-  if (file && !file.isDirectory()) {
-    len = file.size();
-    size_t flen = len;
-    start = millis();
-    Serial.print("- reading");
-    while (len) {
-      size_t toRead = len;
-      if (toRead > 512) {
-        toRead = 512;
-      }
-      file.read(buf, toRead);
-      if ((i++ & 0x001F) == 0x001F) {
-        Serial.print(".");
-      }
-      len -= toRead;
-    }
-    Serial.println("");
-    end = millis() - start;
-    Serial.printf("- %u bytes read in %lu ms\r\n", flen, end);
-    file.close();
-  } else {
-    Serial.println("- failed to open file for reading");
   }
 }
 
@@ -198,20 +113,51 @@ void SPIFF2BUFF(fs::FS &fs, const char *path, char *buf)
   }
 
   Serial.println("- read from file:");
-  uint8_t col=0;
-  uint8_t row=0;
+
   //while (file.available()) {
+  
+  for(uint8_t skip=0;skip<IME_SLIKE;skip++)
+  {
+    file.read(); //preskocis ime slike pol pa začneš pr podatkih
+  }
+  
     char temp;
-    for(int i=0;i<100;i++)
-    {temp=file.read();
-    Serial.print(temp);
-    buf[i]=temp;
+    String beseda="";
+    bool str_rdy=0;
+    uint8_t char_count=0;
+    uint8_t col=0;
+    uint8_t row=0;
+
+while(row<NUM_ROW || file.available())
+{
+
+    temp=file.read();
+    
+  if(col==NUM_COL && temp=="n")
+  {
+    col=0;
+    row++;
+  }  
+  else{
+    if(temp=="x")str_rdy=1;
+    else if(str_rdy==1)
+    {
+      beseda.concat(temp);
+      char_count++;
+    }
+    if(char_count==4)
+    {
+      buf[row][col]=string2header(beseda);
+      col++:
+      beseda="";
+      str_rdy=0;
+      char_count=0;
+    }
+    
     }
     Serial.println(" ");
-    //Serial.write(file.read());
-    //buf=temp;
-    //buf++;
-  //}
+  
+}
   file.close();
 }
 
@@ -224,6 +170,7 @@ void setup() {
   Serial.begin(115200);
   delay(10);
 
+  //dodaj del da se ne formatira oz formatira samo prvic
     if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
     Serial.println("SPIFFS Mount Failed");
     spiffs_flag=0;
@@ -233,11 +180,14 @@ void setup() {
   {
     writeFile(SPIFFS, "/slika1.txt","Slika 1\r\n");
   }
-
+  //ntp datum
+  //zapiši pravilno sliko v img_buffer
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
+  //dodaj da skico se povezuje
+  //dodaj skico da louda data
   Serial.println("Started");
   Serial.print("Connecting");
   while (WiFi.status() != WL_CONNECTED) {
@@ -254,12 +204,12 @@ void loop() {
   delay(sendInterval);
 }
 
-void spreadsheet_comm(void) {
-   static uint8_t slika_num=0;
-   static uint8_t slika_vrstica=0;
-   HTTPClient http;
-   String url="https://script.google.com/macros/s/"+GOOGLE_SCRIPT_ID+"/exec?read";
-//   Serial.print(url);
+void gsheets2spiff(void) {
+  static uint8_t slika_num=0;
+  static uint8_t slika_vrstica=0;
+  HTTPClient http;
+  String url="https://script.google.com/macros/s/"+GOOGLE_SCRIPT_ID+"/exec?read";
+
   Serial.print("Making a request  ");
   http.begin(url.c_str()); //Specify the URL and certificate
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
@@ -306,34 +256,21 @@ void spreadsheet_comm(void) {
   readFile(SPIFFS,"/slika1.txt");
 }
 
-int string2header(char *s) //TEST!!!
+int string2header(char *s) 
 {
-    int x = 0;
-    uint8_t cnt=4;
-  while(cnt!=0) {
-    cnt--;
-    //Serial.print(cnt);
-    //Serial.print(" ");
-    char c = *s;
-    Serial.print(c);
-    //Serial.print(" ");
-    //Serial.println()
-    if (c >= '0' && c <= '9') {
-     // x *= pow(16,cnt);
-      x += (c - '0')*pow(16,cnt); 
-    }
-    else if (c >= 'A' && c <= 'F') {
-     // x *= 16;
-      x += ((c - 'A') + 10)*pow(16,cnt); 
-    }
-    else if (c >= 'a' && c <= 'f') {
-     // x *= 16;
-      x += ((c - 'a') + 10)*pow(16,cnt);
-    }
-    else break;
-    //Serial.println(x);
-    s++;
-    
+int x = 0;
+uint8_t cnt=4; // char count
+while(cnt!=0) 
+  {
+  cnt--;
+  char c = *s;
+  
+  if (c >= '0' && c <= '9')x += (c - '0')*pow(16,cnt); 
+  else if (c >= 'A' && c <= 'F')x += ((c - 'A') + 10)*pow(16,cnt); 
+  else if (c >= 'a' && c <= 'f')x += ((c - 'a') + 10)*pow(16,cnt);
+  else break;
+  
+  s++; 
   }
   return x;
 }
