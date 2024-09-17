@@ -6,60 +6,78 @@
 //to do: update po dnevih, kdaj potegne dol nov data (NTP)
 //nujno test če zapiše stvari pravilno v img_buffer
 //test če lahko zapisano prikaže
+//TO DO: GSHEETS V SPIFF preveri če potegne vse slike 
 
-#define DEBUG_FLAG 0
+  #define DEBUG_FLAG 0
 
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_ST7735.h> // Hardware-specific library
-#include <SPI.h>
+  #include <WiFi.h>
+  #include <HTTPClient.h>
+  #include <Adafruit_GFX.h>    // Core graphics library
+  #include <Adafruit_ST7735.h> // Hardware-specific library
+  #include <SPI.h>
 
-#include "FS.h"
-#include "SPIFFS.h"
+  #include "FS.h"
+  #include "SPIFFS.h"
 
-//Things to change
-const char * ssid_hotspot = "monika";
-const char * password_hotpost = "mladizmaji";
+  /*Things to change */
+  const char * ssid_hotspot = "monika";
+  const char * password_hotpost = "mladizmaji";
 
-const char * ssid_home = "monika";
-const char * password_home = "mladizmaji";
+  const char * ssid_home = "monika";
+  const char * password_home = "mladizmaji";
 
-String GOOGLE_SCRIPT_ID = "AKfycbxthn0D81Pdln1UvdInSiHdrAl5lZZhwWv0v3nLfKCvYEkKdY-tlO8prBDzzCjaFC8";
+  String GOOGLE_SCRIPT_ID = "AKfycbxthn0D81Pdln1UvdInSiHdrAl5lZZhwWv0v3nLfKCvYEkKdY-tlO8prBDzzCjaFC8";
 
-const int sendInterval = 100; 
-/********************************************************************************/
-  #define TFT_CS         5  //case select connect to pin 5
-  #define TFT_RST        25 //reset connect to pin 15
-  #define TFT_DC         27 //AO connect to pin 32  (not sure that this is really used)  try pin 25
-  #define TFT_MOSI       23 //Data = SDA connect to pin 23
-  #define TFT_SCLK       18 //Clock = SCK connect to pin 18
-  #define TFT_LED        26 
-//Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
+  const int sendInterval = 100;
+  /* KONEC USER CHANGES */
 
-#define IME_SLIKE 10 // slika1\r\n vzame prvih 10 znakov
-#define NUM_DAYS 7
+  //--------------------------------------------------------------------
 
-String imena_dir[8]=["/slika1.txt","/slika2.txt","/slika3.txt","/slika4.txt","/slika5.txt","/slika6.txt","/slika7.txt"];
-String spif_log="/log.txt";
+  /*  ZASLON STUFF  */
+    #define TFT_CS         5  //case select connect to pin 5
+    #define TFT_RST        25 //reset connect to pin 15
+    #define TFT_DC         27 //AO connect to pin 32  (not sure that this is really used)  try pin 25
+    #define TFT_MOSI       23 //Data = SDA connect to pin 23
+    #define TFT_SCLK       18 //Clock = SCK connect to pin 18
+    #define TFT_LED        26 
+  //Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
+  /*  KONEC ZASLON STUFF  */
 
-int img_buffer[161][121];
+  //------------------------------------------------------------
 
-//WiFiClientSecure client;
+  /*    SLIKE STUFF     */
+  #define IME_SLIKE 10 // slika1\r\n vzame prvih 10 znakov
+  #define NUM_DAYS 7
 
-const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = 0;
-const int   daylightOffset_sec = 3600;
-const uint8_t day_info=0;
-uint8_t week_day=0;
-uint8_t day_of_month=0;
-uint8_t month=0;
-uint8_t year=0;
+  String imena_dir[8]=["/slika1.txt","/slika2.txt","/slika3.txt","/slika4.txt","/slika5.txt","/slika6.txt","/slika7.txt"];
+  String spif_log="/log.txt";
 
-bool spiffs_flag=1;
+  int img_buffer[161][121];
+  /* KONEC SLIKE STUFF  */
 
-#define FORMAT_SPIFFS_IF_FAILED true
+  //------------------------------------------------------------
+  //WiFiClientSecure client;
 
+  /*       DATUM STUFF          */
+  const char* ntpServer = "pool.ntp.org";
+  const long  gmtOffset_sec = 0;
+  const int   daylightOffset_sec = 3600;
+  const uint8_t day_info=0;
+  uint8_t week_day=0;
+  uint8_t day_of_month=0;
+  uint8_t month=0;
+  uint8_t year=0;
+  /* KONEC DATUM STUFFA         */
+
+  //-------------------------------------------------------
+
+  /*      SPIFFS      */
+  bool spiffs_flag=1;
+
+  #define FORMAT_SPIFFS_IF_FAILED true
+  /*    KONEC SPIFFS    */
+
+  //---------------------------------------------------------
 
 bool readFile(fs::FS &fs, const char *path) {
   Serial.printf("Reading file: %s\r\n", path);
@@ -195,14 +213,21 @@ void SPIFF2BUFF(fs::FS &fs, const char *path, char *buf)
     file.close();
   }
 
-char str_buf[200][1000];
 
 void setup() {
   //tft.initR(INITR_BLACKTAB);
   //tft.setRotation(0);
   //tft.fillScreen(ST7735_BLACK);
+  #if DEBUG
   Serial.begin(115200);
   delay(10);
+  #endif
+
+  WIFI();
+  
+  //namenjeno fillanju buffer s podatki o sliki/tekstu
+  //spiffs_boot zalaufa in nafila glede na datum
+  SPIFF2BUFF(SPIFFS,imena_dir[spiffs_boot()],img_buffer);
 
   //dodaj del da se ne formatira oz formatira samo prvic
 
@@ -219,7 +244,7 @@ void loop() {
   delay(sendInterval);
 }
 
-uint8_t spiffs_boot() //VRNE SLIKO/TEXT ZA PRIKAZ
+uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
   { uint8_t state_code=0;
     uint8_t pic_of_the_day=0;
   /*
@@ -253,6 +278,8 @@ uint8_t spiffs_boot() //VRNE SLIKO/TEXT ZA PRIKAZ
     }
     else
     { //če log.txt obstaja ga resetiraš, pred tem primerjaš datume
+    if(WiFi.status()==WL_CONNECTED)
+    {time_update();
     struct tm timeinfo;
     uint8_t date_info[10];
     date_info[0]=timeinfo.tm_wday;
@@ -278,21 +305,21 @@ uint8_t spiffs_boot() //VRNE SLIKO/TEXT ZA PRIKAZ
     uint16_t vsota_datum=0;
     for(uint8_t datum=0;datum<9;datum++)vsota_datum+=(date_info[datum]*pow(10,9-datum));
     writeFile(SPIFFS,"log.txt",String(vsota_datum));
+    return date_info[0];
     }
+    else return 10;
+    }
+  }}
 
-    new_last_update(WiFi.status()==WL_CONNECTED);
-  }
-  }
-
-void new_last_update(bool wifi_connected)
+void time_update(bool wifi_connected)
   {
+    
     if(wifi_connected)
     {
-      struct tm timeinfo;
-      //write(timeinfo.tm_wday)   // day of the month 1-31
-      //wirte(timeinfo.tm_mon+1) //month since jan
-      //write(timeinfo.tm_year) //years since 1990
+      configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+      printLocalTime();
     }
+    wifi_off();
   }
 bool WIFI()
   {
@@ -318,6 +345,12 @@ bool WIFI()
   if(WiFi.status() == WL_CONNECTED)wifi_success=1;
   }
   return wifi_success;
+  }
+
+void wifi_off()
+  {
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
   }
 
 void gsheets2spiff(void) 
