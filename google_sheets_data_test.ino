@@ -3,12 +3,15 @@
 
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 
-//to do: update po dnevih, kdaj potegne dol nov data (NTP)
-//nujno test če zapiše stvari pravilno v img_buffer
-//test če lahko zapisano prikaže
-//TO DO: GSHEETS V SPIFF preveri če potegne vse slike 
+/*to do
+ - uredi gScript (imena, zaporedje...)
+ - potegne vse slike v spiffs ko se zamenja teden (dan 1 in nov datum)
+ - naloži slike iz spiffs na ekran (test da vse naloži ciklično v buffer in pokaže)
+ - tekst buffer
+ - tipka
+ */
 
-  #define DEBUG_FLAG 0
+  #define DEBUG 1
 
   #include <WiFi.h>
   #include "time.h"
@@ -20,12 +23,15 @@
   #include "FS.h"
   #include "SPIFFS.h"
 
+  #define TIPKA 2
+
   /*Things to change */
+  
   const char * ssid_hotspot = "monika";
   const char * password_hotspot = "mladizmaji";
 
-  const char * ssid_home = "monika";
-  const char * password_home = "mladizmaji";
+  const char * ssid_home = "test";
+  const char * password_home = "test";
 
   String GOOGLE_SCRIPT_ID = "AKfycbxthn0D81Pdln1UvdInSiHdrAl5lZZhwWv0v3nLfKCvYEkKdY-tlO8prBDzzCjaFC8";
 
@@ -115,13 +121,18 @@ String readFile1Char(fs::FS &fs, const char *path, bool keep_open) {
   }
   String znak="";
 
-  while(znak=="")
-  {
+  //while(znak=="")
+  //{
   if (file.available()) {
     znak=file.read();
+    if(!keep_open)file.close();
   }
+  //}
+  else
+  {
+    return "H";
+    if(!keep_open)file.close();
   }
-  if(!keep_open)file.close();
   return znak;
 }
 
@@ -226,27 +237,28 @@ void setup() {
   //tft.initR(INITR_BLACKTAB);
   //tft.setRotation(0);
   //tft.fillScreen(ST7735_BLACK);
+
+  pinMode(TIPKA,INPUT_PULLUP);
+  
   #if DEBUG
   Serial.begin(115200);
   delay(10);
   #endif
 
   WIFI();
+
+  Serial.println(spiffs_boot());
   
-  //namenjeno fillanju buffer s podatki o sliki/tekstu
-  //spiffs_boot zalaufa in nafila glede na datum
-  SPIFF2BUFF(SPIFFS,imena_dir[spiffs_boot()]);
+  wifi_off();
 
-  //dodaj del da se ne formatira oz formatira samo prvic
 
-  //ntp datum
   //zapiši pravilno sliko v img_buffer
   
 }
 
 void loop() {
-  gsheets2spiff();
-  delay(sendInterval);
+  //gsheets2spiff();
+  //delay(sendInterval);
 }
 
 uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
@@ -274,6 +286,7 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     {//ce ni log.txt filea se ga naredi. 
     //Torej je nov boot in se naredi tud slike na novo
       writeFile(SPIFFS,"/log.txt","");
+      Serial.println("naredu log");
       for(uint8_t name_list;name_list<NUM_DAYS;name_list++)
       {
         writeFile(SPIFFS,imena_dir[name_list],"");
@@ -282,23 +295,30 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     }
     else
     { //če log.txt obstaja ga resetiraš, pred tem primerjaš datume
-    if(WiFi.status()==WL_CONNECTED)
-    {time_update(1);
-    struct tm timeinfo;
     uint8_t date_info[10];
+    if(WiFi.status()==WL_CONNECTED)
+    {
+    Serial.print("updejtnu cajt ");
+    struct tm timeinfo;    
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    Serial.println(getLocalTime(&timeinfo));
+      //printLocalTime();
+    wifi_off();
+    
     date_info[0]=timeinfo.tm_wday;
+    date_info[0]=date_info[0]-(date_info[0]!=0)+6*(date_info[0]==0);
     date_info[1]=(timeinfo.tm_mday)/10;
     date_info[2]=(timeinfo.tm_mday)%10;
     date_info[3]=(timeinfo.tm_mon+1)/10;
     date_info[4]=(timeinfo.tm_mon+1)%10;
-    date_info[5]=(timeinfo.tm_year)/1000;
-    date_info[6]=((timeinfo.tm_year)&1000)/100;
-    date_info[7]=(((timeinfo.tm_year)&1000)&100)/10;
-    date_info[8]=timeinfo.tm_year-date_info[5]-date_info[6]-date_info[7];
-    
+    date_info[5]=(timeinfo.tm_year)/100-1;
+    date_info[6]=((timeinfo.tm_year)%100)/10;
+    date_info[7]=(((timeinfo.tm_year)%100)%10);
+    //date_info[8]=timeinfo.tm_year-date_info[5]-date_info[6]-date_info[7];
+    //Serial.println(date_info[0]);
     uint8_t date_state=0;
-      for(uint8_t date_check=0;date_check<9;date_check++)
-      {
+      for(uint8_t date_check=0;date_check<8;date_check++)
+      { Serial.println(date_info[date_check]);
         String cifra=String(readFile1Char(SPIFFS,"/log.txt",date_check!=8));
         if(cifra.toInt()!=date_info[date_check])
           {
@@ -306,29 +326,24 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
             else date_state+=2;
           }
       }
+    Serial.println(date_state);
+    }
     deleteFile(SPIFFS,"/log.txt");  
-    uint16_t vsota_datum=0;
-    for(uint8_t datum=0;datum<9;datum++)vsota_datum+=(date_info[datum]*pow(10,9-datum));
-    writeFile(SPIFFS,"log.txt",String(vsota_datum));
+    uint32_t vsota_datum=0;
+    for(uint8_t datum=0;datum<8;datum++)vsota_datum+=(date_info[datum]*pow(10,7-datum));
+    writeFile(SPIFFS,"/log.txt",String(vsota_datum));
+    Serial.println(vsota_datum);
+    readFile(SPIFFS,"/log.txt");
     return date_info[0];
     }
-    else return 10;
+    return 10;
     }
-  }}
-
-void time_update(bool wifi_connected)
-  {
-    
-    if(wifi_connected)
-    {
-      configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-      //printLocalTime();
-    }
-    wifi_off();
   }
+
+
 bool WIFI()
   {
-      WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid_home, password_home);
 
   uint8_t wifi_attempt=0;
