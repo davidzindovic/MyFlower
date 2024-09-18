@@ -49,10 +49,17 @@
   #define IME_SLIKE 10 // slika1\r\n vzame prvih 10 znakov
   #define NUM_DAYS 7
 
-  String imena_dir[8]=["/slika1.txt","/slika2.txt","/slika3.txt","/slika4.txt","/slika5.txt","/slika6.txt","/slika7.txt"];
+  String imena_dir[8]={"/slika1.txt","/slika2.txt","/slika3.txt","/slika4.txt","/slika5.txt","/slika6.txt","/slika7.txt"," "};
   String spif_log="/log.txt";
 
-  int img_buffer[161][121];
+  //locljivost slike:
+  #define NUM_ROW 160
+  #define NUM_COL 120
+
+  int img_buffer[NUM_ROW+1][NUM_COL+1];
+
+  #define MAX_TEXT_SPLITS 4
+  String text_buffer[MAX_TEXT_SPLITS];
   /* KONEC SLIKE STUFF  */
 
   //------------------------------------------------------------
@@ -105,9 +112,9 @@ String readFile1Char(fs::FS &fs, const char *path, bool keep_open) {
   delay(1);
   File file = fs.open(path);
   }
-  String znak=0;
+  String znak="";
 
-  while(znak==0)
+  while(znak=="")
   {
   if (file.available()) {
     znak=file.read();
@@ -158,7 +165,7 @@ void deleteFile(fs::FS &fs, const char *path) {
   }
 }
 
-void SPIFF2BUFF(fs::FS &fs, const char *path, char *buf)
+void SPIFF2BUFF(fs::FS &fs, String path)
   {
     File file = fs.open(path);
     if (!file || file.isDirectory()) {
@@ -173,7 +180,7 @@ void SPIFF2BUFF(fs::FS &fs, const char *path, char *buf)
       file.read(); //preskocis ime slike pol pa začneš pr podatkih
     }
     
-      char temp;
+      String temp;
       String beseda="";
       bool str_rdy=0;
       uint8_t char_count=0;
@@ -199,8 +206,8 @@ void SPIFF2BUFF(fs::FS &fs, const char *path, char *buf)
       }
       if(char_count==4)
       {
-        buf[row][col]=string2header(beseda);
-        col++:
+        img_buffer[row][col]=string2header(beseda);
+        col++;
         beseda="";
         str_rdy=0;
         char_count=0;
@@ -227,15 +234,12 @@ void setup() {
   
   //namenjeno fillanju buffer s podatki o sliki/tekstu
   //spiffs_boot zalaufa in nafila glede na datum
-  SPIFF2BUFF(SPIFFS,imena_dir[spiffs_boot()],img_buffer);
+  SPIFF2BUFF(SPIFFS,imena_dir[spiffs_boot()]);
 
   //dodaj del da se ne formatira oz formatira samo prvic
 
   //ntp datum
   //zapiši pravilno sliko v img_buffer
-
-
-  }
   
 }
 
@@ -407,14 +411,14 @@ void gsheets2spiff(void)
   }
 
 
-int string2header(char *s) 
+int string2header(String s) 
   {
   int x = 0;
   uint8_t cnt=4; // char count
   while(cnt!=0) 
   {
   cnt--;
-  char c = *s;
+  char c = s.charAt(cnt);
   
   if (c >= '0' && c <= '9')x += (c - '0')*pow(16,cnt); 
   else if (c >= 'A' && c <= 'F')x += ((c - 'A') + 10)*pow(16,cnt); 
