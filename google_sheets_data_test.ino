@@ -11,6 +11,7 @@
   #define DEBUG_FLAG 0
 
   #include <WiFi.h>
+  #include "time.h"
   #include <HTTPClient.h>
   #include <Adafruit_GFX.h>    // Core graphics library
   #include <Adafruit_ST7735.h> // Hardware-specific library
@@ -21,7 +22,7 @@
 
   /*Things to change */
   const char * ssid_hotspot = "monika";
-  const char * password_hotpost = "mladizmaji";
+  const char * password_hotspot = "mladizmaji";
 
   const char * ssid_home = "monika";
   const char * password_home = "mladizmaji";
@@ -80,7 +81,7 @@
 
   /*      SPIFFS      */
   bool spiffs_flag=1;
-
+  //pazi ker je sou path iz const char * -> String
   #define FORMAT_SPIFFS_IF_FAILED true
   /*    KONEC SPIFFS    */
 
@@ -124,7 +125,7 @@ String readFile1Char(fs::FS &fs, const char *path, bool keep_open) {
   return znak;
 }
 
-void writeFile(fs::FS &fs, const char *path, const char *message) {
+void writeFile(fs::FS &fs, /*const char * */ String path, /*const char * */String message) {
   Serial.printf("Writing file: %s\r\n", path);
 
   File file = fs.open(path, FILE_WRITE);
@@ -191,7 +192,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)
   {
 
       temp=file.read();
-      
+    
     if(col==NUM_COL && temp=="n")
     {
       col=0;
@@ -244,7 +245,7 @@ void setup() {
 }
 
 void loop() {
-  spreadsheet_comm();
+  gsheets2spiff();
   delay(sendInterval);
 }
 
@@ -259,7 +260,6 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
     Serial.println("SPIFFS Mount Failed");
     spiffs_flag=0;
-    return;
   }
   /*
     Log.txt (brez \n):
@@ -283,7 +283,7 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     else
     { //če log.txt obstaja ga resetiraš, pred tem primerjaš datume
     if(WiFi.status()==WL_CONNECTED)
-    {time_update();
+    {time_update(1);
     struct tm timeinfo;
     uint8_t date_info[10];
     date_info[0]=timeinfo.tm_wday;
@@ -294,14 +294,15 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     date_info[5]=(timeinfo.tm_year)/1000;
     date_info[6]=((timeinfo.tm_year)&1000)/100;
     date_info[7]=(((timeinfo.tm_year)&1000)&100)/10;
-    date_info[8]=timeinfo.tm_year-dateinfo[5]-dateinfo[6]-dateinfo[7];
+    date_info[8]=timeinfo.tm_year-date_info[5]-date_info[6]-date_info[7];
     
     uint8_t date_state=0;
       for(uint8_t date_check=0;date_check<9;date_check++)
       {
-        if(toInt(readFile1Char(SPIFFS,"/log.txt",date_check!=8))!=date_info[date_check])
+        String cifra=String(readFile1Char(SPIFFS,"/log.txt",date_check!=8));
+        if(cifra.toInt()!=date_info[date_check])
           {
-            if(data_check==0)date_state+=1;
+            if(date_check==0)date_state+=1;
             else date_state+=2;
           }
       }
@@ -321,7 +322,7 @@ void time_update(bool wifi_connected)
     if(wifi_connected)
     {
       configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-      printLocalTime();
+      //printLocalTime();
     }
     wifi_off();
   }
@@ -340,7 +341,7 @@ bool WIFI()
   wifi_attempt=0;
   if(WiFi.status() != WL_CONNECTED)
   {
-    WiFi.begin(ssid_hotpost,password_hotpost)
+    WiFi.begin(ssid_hotspot,password_hotspot);
     while ((WiFi.status() != WL_CONNECTED) && (wifi_attempt<5)) {
     delay(500);
     wifi_attempt++;
@@ -414,18 +415,16 @@ void gsheets2spiff(void)
 int string2header(String s) 
   {
   int x = 0;
-  uint8_t cnt=4; // char count
-  while(cnt!=0) 
+  uint8_t cnt=0; // char count
+  while(cnt!=4)//mora prebrati vse 4 podatke 0x _ _ _ _
   {
-  cnt--;
+  cnt++;
   char c = s.charAt(cnt);
   
   if (c >= '0' && c <= '9')x += (c - '0')*pow(16,cnt); 
   else if (c >= 'A' && c <= 'F')x += ((c - 'A') + 10)*pow(16,cnt); 
   else if (c >= 'a' && c <= 'f')x += ((c - 'a') + 10)*pow(16,cnt);
-  else break;
-  
-  s++; 
+  else break; 
   }
   return x;
   }
