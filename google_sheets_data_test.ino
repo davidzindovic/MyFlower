@@ -2,7 +2,7 @@
 //AKfycbxZ6U2Afg7i92aL91parhMBiAG7RL4J4UDH6ZdVWtUbktdmV2u6uC8lGxvphJVRBMnQ
 
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
-
+//nov GSCRIPT RABIS!!!!!!!!
 /*to do
  ?- uredi gScript (imena, zaporedje...)
  - potegne vse slike v spiffs ko se zamenja teden (dan 1 in nov datum)
