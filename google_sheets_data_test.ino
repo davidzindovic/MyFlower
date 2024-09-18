@@ -4,11 +4,12 @@
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 
 /*to do
- - uredi gScript (imena, zaporedje...)
+ ?- uredi gScript (imena, zaporedje...)
  - potegne vse slike v spiffs ko se zamenja teden (dan 1 in nov datum)
  - naloži slike iz spiffs na ekran (test da vse naloži ciklično v buffer in pokaže)
- - tekst buffer
+ ?- tekst buffer
  - tipka
+ - tekst - > barve za prikaz pa to. Test število znakov
  */
 
   #define DEBUG 1
@@ -65,6 +66,7 @@
 
   int img_buffer[NUM_ROW+1][NUM_COL+1];
 
+  #define MAX_CHAR_AT_ONCE 60
   #define MAX_TEXT_SPLITS 4
   String text_buffer[MAX_TEXT_SPLITS];
   /* KONEC SLIKE STUFF  */
@@ -177,7 +179,7 @@ void deleteFile(fs::FS &fs, const char *path) {
   }
 }
 
-void SPIFF2BUFF(fs::FS &fs, String path)
+void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   {
     File file = fs.open(path);
     if (!file || file.isDirectory()) {
@@ -199,9 +201,9 @@ void SPIFF2BUFF(fs::FS &fs, String path)
       uint8_t col=0;
       uint8_t row=0;
 
-  while(row<NUM_ROW || file.available())
-  {
-
+  while(row<NUM_ROW)
+  {//premisli ce rabis kje file.available()
+    
       temp=file.read();
     
     if(col==NUM_COL && temp=="n")
@@ -224,10 +226,22 @@ void SPIFF2BUFF(fs::FS &fs, String path)
         str_rdy=0;
         char_count=0;
       }
-      
-      }
-      Serial.println(" ");
-    
+      }  
+  }
+  //ko mine zapisovanje slike se zapiše še text:
+
+  beseda="";
+  char_count=0;
+  while(file.available()&&(char_count!=MAX_TEXT_SPLITS))
+  {
+    temp=file.read();
+    beseda.concat(temp);
+    if(beseda.length()==MAX_CHAR_AT_ONCE)
+    {
+      text_buffer[char_count]=beseda;
+      beseda="";
+      char_count++;
+    } 
   }
     file.close();
   }
@@ -373,55 +387,68 @@ void wifi_off()
     WiFi.mode(WIFI_OFF);
   }
 
-void gsheets2spiff(void) 
+void gsheets2spiff(void)//TEST
   {
-  static uint8_t slika_num=0;
-  static uint8_t slika_vrstica=0;
+  //static uint8_t slika_num=0;
+  //static uint8_t slika_vrstica=0;
   HTTPClient http;
   String url="https://script.google.com/macros/s/"+GOOGLE_SCRIPT_ID+"/exec?read";
 
+  //mogoce morajo biti ti 2 oz 3 vrstice v foru
   Serial.print("Making a request  ");
   http.begin(url.c_str()); //Specify the URL and certificate
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  int httpCode = http.GET();
   String payload;
-    if (httpCode > 0) { //Check for the returning code
-        payload = http.getString();
-        
-        
+  int httpCode=0;
 
-        //Serial.println(httpCode);
-        Serial.println(payload);
-        //if(spiffs_flag)
-        //{
-          appendFile(SPIFFS,"/slika1.txt",payload);
+  for(uint8_t slika_no=0;slika_no<7;slika_no++)
+  { //sheets sam ve kaj ti mora podat
+    for(uint8_t slika_vrstica=0;slika_vrstica<161;slika_vrstica++)
+    {//samo vrstice ker payload je ena vrstica
+     //vrstica 161 je tekst za izpis
+        while(httpCode<=0)httpCode = http.GET();
         
-          appendFile(SPIFFS,"/slika1.txt","\r\n");
-        //}
-        /*
-        if(payload.length()>20)
-        {
-          for(int a=0;a<120;a++)
-          {
-            Serial.print(payload.substring(a*8+2,a*8+4+2));
-            Serial.print("  ");
-            char beseda[5];
-            String payload_temp=payload.substring(a*8+2,a*8+4+2);
-            payload_temp.toCharArray(beseda,5);
-            //payload.substring(a*8+2,a*8+6+2);
-            Serial.println(string2header(beseda));
-            //int num = (int)strtol(hex, NULL, 16);
-            //Serial.print("   ");
-            //Serial.println(num); 
-            //vzame samo kar je za 0x
-          }
-        }
-        */
-        //tft.println(payload);
-      }
-    else {
-      Serial.println("Error on HTTP request");
-    }
+        if (httpCode > 0) { //Check for the returning code
+              payload = http.getString();
+              
+              //Serial.println(httpCode);
+              Serial.println(payload);
+              //if(spiffs_flag)
+              //{
+                
+                
+                appendFile(SPIFFS,imena_dir[slika_no],payload);
+                  //spodnje ni nujno:
+                appendFile(SPIFFS,imena_dir[slika_no],"\r\n");
+              
+              
+              //}
+              /*
+              if(payload.length()>20)
+              {
+                for(int a=0;a<120;a++)
+                {
+                  Serial.print(payload.substring(a*8+2,a*8+4+2));
+                  Serial.print("  ");
+                  char beseda[5];
+                  String payload_temp=payload.substring(a*8+2,a*8+4+2);
+                  payload_temp.toCharArray(beseda,5);
+                  //payload.substring(a*8+2,a*8+6+2);
+                  Serial.println(string2header(beseda));
+                  //int num = (int)strtol(hex, NULL, 16);
+                  //Serial.print("   ");
+                  //Serial.println(num); 
+                  //vzame samo kar je za 0x
+                }
+              }
+              */
+              //tft.println(payload);
+            }
+          else { //ne bi smelo priti do tega
+            Serial.println("Error on HTTP request");
+          }  
+    }      
+  }
   http.end();
   readFile(SPIFFS,"/slika1.txt");
   }
