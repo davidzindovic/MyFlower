@@ -1,7 +1,17 @@
 //https://script.google.com/macros/s/AKfycbzdaV09fHKI9EXjSGqsvhULyvYjJPMojpT9nuZ_rPohTW9qkC3sdaBKCO7EEyIpOlHW/exec
 var ss = SpreadsheetApp.openById('10filLrz145Xd96YkYSqUdl3B7aZ8avuXD2XIyAMyIGU');
-var sheet = ss.getSheetByName('Sheet1');
 
+var sheet1 = ss.getSheetByName('Slika1');
+var sheet2 = ss.getSheetByName('Slika2');
+var sheet3 = ss.getSheetByName('Slika3');
+var sheet4 = ss.getSheetByName('Slika4');
+var sheet5 = ss.getSheetByName('Slika5');
+var sheet6 = ss.getSheetByName('Slika6');
+var sheet7 = ss.getSheetByName('Slika7');
+
+var promet=ss.getSheetByName('Promet');
+
+var sheets=[sheet1,sheet2,sheet3,sheet4,sheet5,sheet6,sheet7];
 
 function doPost(e)
 {
@@ -16,7 +26,9 @@ function doPost(e)
 function doGet(e)
 {
   var read = e.parameter.read;
-  
+
+  var sheet=sheets[promet.getRange('A1').getValue()];
+  //var sheet=ss.getSheetByName('Slika3');
   var range = sheet.getRange('A9');
   var vrednost = sheet.getRange('A9').getValue();
 
@@ -24,20 +36,21 @@ function doGet(e)
   {
     range.setValue(-1); //zato da bo inkrementirana vrednost 0 -> začetek
     sheet.getRange('A11').setValue(1); //da vemo da je zadeva dokončala obdelavo
-  
   }
   if(sheet.getRange('A11').getValue()!==1)
   {
     range.setValue(vrednost+1);
     if (read !== undefined)
     {
-      return ContentService.createTextOutput(sheet.getRange('C'+sheet.getRange('A3').getValue()).getValue());
+      //return ContentService.createTextOutput(sheet.getRange('H'+(sheet.getRange('A3').getValue()+16)).getValue());
+      return ContentService.createTextOutput(sheet.getRange('H17').getValue());
     }
   }
   else if(sheet.getRange('A11').getValue()==1 && sheet.getRange('A18').getValue()==0)
   {
     sheet.getRange('A18').setValue(1);
-    return ContentService.createTextOutput(sheet.getRange('E3').getValue());
+    promet.getRange('A1').setValue(promet.getRange('A1').getValue()+1);
+    return ContentService.createTextOutput(sheet.getRange('H18').getValue());
   }
   else
   {
