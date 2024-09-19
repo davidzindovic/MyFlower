@@ -4,10 +4,11 @@
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 //nov GSCRIPT RABIS!!!!!!!!
 /*to do
- ?- uredi gScript (imena, zaporedje...)
+ !- uredi gScript (imena, zaporedje...) DELA -> ZRIHTAJ UNDO ZA ERROR HTTP REQUEST
  - potegne vse slike v spiffs ko se zamenja teden (dan 1 in nov datum)
  - naloži slike iz spiffs na ekran (test da vse naloži ciklično v buffer in pokaže)
  ?- tekst buffer
+ ?- težava pri spiff_boot? gsheets retarded?
  - tipka
  - tekst - > barve za prikaz pa to. Test število znakov
  */
@@ -34,7 +35,7 @@
   const char * ssid_home = "test";
   const char * password_home = "test";
 
-  String GOOGLE_SCRIPT_ID = "AKfycbxthn0D81Pdln1UvdInSiHdrAl5lZZhwWv0v3nLfKCvYEkKdY-tlO8prBDzzCjaFC8";
+  String GOOGLE_SCRIPT_ID = "AKfycbyQ_eHtCS06jt1yHz9jyOg7-h_NhGWG08Rhe8rofd5MHp1Ldw8fGTjHKuxKNSSRL56v";
 
   const int sendInterval = 100;
   /* KONEC USER CHANGES */
@@ -95,7 +96,7 @@
 
   //---------------------------------------------------------
 
-bool readFile(fs::FS &fs, const char *path) {
+bool readFile(fs::FS &fs, /*const char * */ String path) {
   Serial.printf("Reading file: %s\r\n", path);
   bool fail=0;
   File file = fs.open(path);
@@ -154,7 +155,7 @@ void writeFile(fs::FS &fs, /*const char * */ String path, /*const char * */Strin
   file.close();
 }
 
-void appendFile(fs::FS &fs, const char *path, String message) {
+void appendFile(fs::FS &fs, /*const char * */ String path, String message) {
   Serial.printf("Appending to file: %s\r\n", path);
 
   File file = fs.open(path, FILE_APPEND);
@@ -170,7 +171,7 @@ void appendFile(fs::FS &fs, const char *path, String message) {
   file.close();
 }
 
-void deleteFile(fs::FS &fs, const char *path) {
+void deleteFile(fs::FS &fs, String path) {
   Serial.printf("Deleting file: %s\r\n", path);
   if (fs.remove(path)) {
     Serial.println("- file deleted");
@@ -179,6 +180,13 @@ void deleteFile(fs::FS &fs, const char *path) {
   }
 }
 
+bool availableFile(fs::FS &fs, String path)
+  {
+    File file = fs.open(path);
+    if (!file || file.isDirectory()||!file.available()){file.close();return 0;}
+    if (file.available()){file.close();return 1;}
+    else {file.close();return 0;}
+  }
 void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   {
     File file = fs.open(path);
@@ -261,7 +269,11 @@ void setup() {
 
   WIFI();
 
-  Serial.println(spiffs_boot());
+  //Serial.println(spiffs_boot());
+
+  gsheets2spiff();
+
+  //for(uint8_t a=0;a<7;a++){readFile(SPIFFS,imena_dir[a]);}
   
   wifi_off();
 
@@ -301,10 +313,6 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     //Torej je nov boot in se naredi tud slike na novo
       writeFile(SPIFFS,"/log.txt","");
       Serial.println("naredu log");
-      for(uint8_t name_list;name_list<NUM_DAYS;name_list++)
-      {
-        writeFile(SPIFFS,imena_dir[name_list],"");
-      }
       state_code=1;
     }
     else
@@ -346,6 +354,13 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     uint32_t vsota_datum=0;
     for(uint8_t datum=0;datum<8;datum++)vsota_datum+=(date_info[datum]*pow(10,7-datum));
     writeFile(SPIFFS,"/log.txt",String(vsota_datum));
+
+    for(uint8_t name_list;name_list<NUM_DAYS;name_list++)
+      {
+        if(!availableFile(SPIFFS,imena_dir[name_list])){writeFile(SPIFFS,imena_dir[name_list],"Slika1\r\n");Serial.print("naredu sliko");Serial.println(name_list);}
+        else Serial.print("ŽE narjena slika");Serial.println(name_list);
+      }
+    
     Serial.println(vsota_datum);
     readFile(SPIFFS,"/log.txt");
     return date_info[0];
@@ -395,18 +410,28 @@ void gsheets2spiff(void)//TEST
   String url="https://script.google.com/macros/s/"+GOOGLE_SCRIPT_ID+"/exec?read";
 
   //mogoce morajo biti ti 2 oz 3 vrstice v foru
+  /*
   Serial.print("Making a request  ");
   http.begin(url.c_str()); //Specify the URL and certificate
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   String payload;
   int httpCode=0;
-
+*/
   for(uint8_t slika_no=0;slika_no<7;slika_no++)
   { //sheets sam ve kaj ti mora podat
-    for(uint8_t slika_vrstica=0;slika_vrstica<161;slika_vrstica++)
+    //deleteFile(SPIFFS,imena_dir[slika_no]);
+    //writeFile(SPIFFS,imena_dir[slika_no],"Slikan\r\n");  
+    for(uint8_t slika_vrstica=0;slika_vrstica<2;slika_vrstica++)
     {//samo vrstice ker payload je ena vrstica
      //vrstica 161 je tekst za izpis
-        while(httpCode<=0)httpCode = http.GET();
+        //while(httpCode<=0)
+        
+        Serial.print("Making a request  ");
+        http.begin(url.c_str()); //Specify the URL and certificate
+        http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+        String payload;
+        int httpCode=0;
+        httpCode = http.GET();
         
         if (httpCode > 0) { //Check for the returning code
               payload = http.getString();
@@ -417,9 +442,10 @@ void gsheets2spiff(void)//TEST
               //{
                 
                 
-                appendFile(SPIFFS,imena_dir[slika_no],payload);
+                //appendFile(SPIFFS,imena_dir[slika_no],payload);
                   //spodnje ni nujno:
-                appendFile(SPIFFS,imena_dir[slika_no],"\r\n");
+                
+                //appendFile(SPIFFS,imena_dir[slika_no],"\r\n");
               
               
               //}
@@ -446,11 +472,11 @@ void gsheets2spiff(void)//TEST
             }
           else { //ne bi smelo priti do tega
             Serial.println("Error on HTTP request");
-          }  
+          }
+          http.end(); delay(100); 
     }      
   }
-  http.end();
-  readFile(SPIFFS,"/slika1.txt");
+  
   }
 
 
