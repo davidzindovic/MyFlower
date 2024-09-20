@@ -2,14 +2,11 @@
 //AKfycbxZ6U2Afg7i92aL91parhMBiAG7RL4J4UDH6ZdVWtUbktdmV2u6uC8lGxvphJVRBMnQ
 
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
-//nov GSCRIPT RABIS!!!!!!!!
 /*to do
- !- uredi gScript (imena, zaporedje...) DELA -> ZRIHTAJ UNDO ZA ERROR HTTP REQUEST
  - potegne vse slike v spiffs ko se zamenja teden (dan 1 in nov datum)
+ - SPIFFS TO BUFF
  - naloži slike iz spiffs na ekran (test da vse naloži ciklično v buffer in pokaže)
  ?- tekst buffer
- ?- težava pri spiff_boot? gsheets retarded?
- - tipka
  - tekst - > barve za prikaz pa to. Test število znakov
  */
 
@@ -25,7 +22,7 @@
   #include "FS.h"
   #include "SPIFFS.h"
 
-  #define TIPKA 2
+  #define pushButton_pin   17
 
   /*Things to change */
   
@@ -95,6 +92,15 @@
   /*    KONEC SPIFFS    */
 
   //---------------------------------------------------------
+  bool tipka=0;
+
+
+void IRAM_ATTR isr()
+{
+  static uint32_t timek=0;
+  if((millis()-timek)>=300)tipka=!tipka;
+  timek=millis();
+}
 
 bool readFile(fs::FS &fs, /*const char * */ String path) {
   Serial.printf("Reading file: %s\r\n", path);
@@ -114,7 +120,7 @@ bool readFile(fs::FS &fs, /*const char * */ String path) {
   return fail;
 }
 
-String readFile1Char(fs::FS &fs, const char *path, bool keep_open) {
+String readFile1Char(fs::FS &fs, const char *path, uint8_t which_char) {
   Serial.printf("Reading file: %s\r\n", path);
   bool fail=0;
   File file = fs.open(path);
@@ -127,14 +133,15 @@ String readFile1Char(fs::FS &fs, const char *path, bool keep_open) {
   //while(znak=="")
   //{
   if (file.available()) {
+    for(uint8_t bruh=0;bruh<which_char;bruh++)file.read();
     znak=file.read();
-    if(!keep_open)file.close();
+    file.close();
   }
   //}
   else
   {
     return "H";
-    if(!keep_open)file.close();
+    file.close();
   }
   return znak;
 }
@@ -201,7 +208,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
     {
       file.read(); //preskocis ime slike pol pa začneš pr podatkih
     }
-    
+    //POPRAVIII!!!!!!
       String temp;
       String beseda="";
       bool str_rdy=0;
@@ -260,7 +267,8 @@ void setup() {
   //tft.setRotation(0);
   //tft.fillScreen(ST7735_BLACK);
 
-  pinMode(TIPKA,INPUT_PULLUP);
+  pinMode(pushButton_pin, INPUT_PULLUP);
+  attachInterrupt(pushButton_pin, isr, FALLING);
   
   #if DEBUG
   Serial.begin(115200);
@@ -268,26 +276,20 @@ void setup() {
   #endif
 
   WIFI();
-
-  //Serial.println(spiffs_boot());
-
-  gsheets2spiff();
-
-  //for(uint8_t a=0;a<7;a++){readFile(SPIFFS,imena_dir[a]);}
-  
+  uint8_t izbrani_dan=spiffs_boot()
+  //gsheets2spiff();
+  //SPIFF2BUFF(SPIFFS,imena_dir[izbrani_dan]);
   wifi_off();
-
 
   //zapiši pravilno sliko v img_buffer
   
 }
 
 void loop() {
-  //gsheets2spiff();
-  //delay(sendInterval);
+
 }
 
-uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
+uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
   { uint8_t state_code=0;
     uint8_t pic_of_the_day=0;
   /*
@@ -317,7 +319,7 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     }
     else
     { //če log.txt obstaja ga resetiraš, pred tem primerjaš datume
-    uint8_t date_info[10];
+    int date_info[10];
     if(WiFi.status()==WL_CONNECTED)
     {
     Serial.print("updejtnu cajt ");
@@ -325,7 +327,6 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
     Serial.println(getLocalTime(&timeinfo));
       //printLocalTime();
-    wifi_off();
     
     date_info[0]=timeinfo.tm_wday;
     date_info[0]=date_info[0]-(date_info[0]!=0)+6*(date_info[0]==0);
@@ -340,9 +341,9 @@ uint8_t spiffs_boot() //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     //Serial.println(date_info[0]);
     uint8_t date_state=0;
       for(uint8_t date_check=0;date_check<8;date_check++)
-      { Serial.println(date_info[date_check]);
-        String cifra=String(readFile1Char(SPIFFS,"/log.txt",date_check!=8));
-        if(cifra.toInt()!=date_info[date_check])
+      { 
+        String cifra=readFile1Char(SPIFFS,"/log.txt",date_check);
+        if((cifra.toInt()-48)!=date_info[date_check])
           {
             if(date_check==0)date_state+=1;
             else date_state+=2;
@@ -476,7 +477,6 @@ void gsheets2spiff(void)//TEST
           http.end(); delay(100); 
     }      
   }
-  
   }
 
 
