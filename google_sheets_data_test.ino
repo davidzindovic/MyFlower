@@ -8,6 +8,7 @@
  - naloži slike iz spiffs na ekran (test da vse naloži ciklično v buffer in pokaže)
  ?- tekst buffer
  - tekst - > barve za prikaz pa to. Test število znakov
+ - error http request!!!!
  */
 
   #define DEBUG 1
@@ -191,7 +192,7 @@ bool availableFile(fs::FS &fs, String path)
     else {file.close();return 0;}
   }
 void SPIFF2BUFF(fs::FS &fs, String path)//TEST
-  {
+  { Serial.println(path);
     File file = fs.open(path);
     if (!file || file.isDirectory()) {
       //Serial.println("- failed to open file for reading");
@@ -202,7 +203,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
     
     for(uint8_t skip=0;skip<IME_SLIKE;skip++)
     {
-      file.read(); //preskocis ime slike pol pa začneš pr podatkih
+      Serial.print(file.read()); //preskocis ime slike pol pa začneš pr podatkih
     }
     //POPRAVIII!!!!!!
       String temp;
@@ -216,16 +217,16 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   {//premisli ce rabis kje file.available()
     
       temp=file.read();
-    
+    Serial.print(col);Serial.print(" ");Serial.print(row);Serial.print(" ");Serial.println(temp);
     if(col==(NUM_COL-1))
     {
       col=0;
       row++;
     }  
-    else{
-      if(temp=="x")str_rdy=1;
+    else{//88='x'
+      if(temp.toInt()==120)str_rdy=1;
       else if(str_rdy==1)
-      {
+      {Serial.print("x");
         beseda.concat(temp);
         char_count++;
       }
@@ -233,6 +234,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
       {
         //Serial.println(string2header(beseda));
         img_buffer[row][col]=string2header(beseda);
+        Serial.println(beseda);
         col++;
         beseda="";
         str_rdy=0;
@@ -247,10 +249,12 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   while(file.available()&&(char_count!=MAX_TEXT_SPLITS))
   {
     temp=file.read();
+    Serial.print(temp);
     beseda.concat(temp);
     if(beseda.length()==MAX_CHAR_AT_ONCE)
     {
       text_buffer[char_count]=beseda;
+      Serial.println(beseda);
       beseda="";
       char_count++;
     } 
@@ -276,7 +280,7 @@ void setup() {
   const uint8_t izbrani_dan=spiffs_boot();
   SPIFF2BUFF(SPIFFS,imena_dir[izbrani_dan]);
   wifi_off();
-/*
+
   for(uint8_t vrstice=0;vrstice<160;vrstice++)
   {
     for(uint8_t stolpci=0;stolpci<120;stolpci++)
@@ -289,7 +293,7 @@ void setup() {
     for(uint8_t txt=0;txt<4;txt++)
     {
       Serial.println(text_buffer[txt]);
-    }*/
+    }
   //for(uint8_t datoteka=0;datoteka<7;datoteka++)file.read(SPIFFS,imena_dir[datoteka]);
   
   //zapiši pravilno sliko v img_buffer
@@ -377,7 +381,8 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     readFile(SPIFFS,"/log.txt");
 
     //če se je datum spremenil in je ponedeljek, updejta nabor:
-    /*if(date_state!=0 && date_info[0]==0)*/gsheets2spiff();
+    /*if(date_state!=0 && date_info[0]==0)*/
+    //gsheets2spiff();
     
     return date_info[0];
     }
@@ -444,7 +449,7 @@ void gsheets2spiff(void)//TEST
         
         if (httpCode > 0) { //Check for the returning code
               payload = http.getString();
-              Serial.print("got payload");
+              Serial.println("got payload");
               //Serial.println(httpCode);
               //Serial.println(payload);
               //if(spiffs_flag)
