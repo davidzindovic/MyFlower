@@ -47,7 +47,7 @@
     #define TFT_MOSI       23 //Data = SDA connect to pin 23
     #define TFT_SCLK       18 //Clock = SCK connect to pin 18
     #define TFT_LED        26 
-  //Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
+  Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
   /*  KONEC ZASLON STUFF  */
 
   //------------------------------------------------------------
@@ -201,10 +201,10 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
 
     //Serial.println("- read from file:");
     
-    for(uint8_t skip=0;skip<IME_SLIKE;skip++)
-    {
-      Serial.print(file.read()); //preskocis ime slike pol pa začneš pr podatkih
-    }
+    //for(uint8_t skip=0;skip<IME_SLIKE;skip++)
+    //{
+    //  Serial.print(file.read()); //preskocis ime slike pol pa začneš pr podatkih
+    //}
     //POPRAVIII!!!!!!
       String temp;
       String beseda="";
@@ -213,17 +213,19 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
       uint8_t col=0;
       uint8_t row=0;
 
-  while(row<NUM_ROW)
+  //while(row<NUM_ROW && (temp.toInt()!=(-1)))
+  while(((row*120+col)<96000)&&(temp.toInt()!=(-1)))
   {//premisli ce rabis kje file.available()
     
-      temp=file.read();
-    Serial.print(col);Serial.print(" ");Serial.print(row);Serial.print(" ");Serial.println(temp);
+    temp=file.read();
+    char temp2=temp.charAt(0);
+    Serial.print(col);Serial.print(" ");Serial.print(row);Serial.print(" ");Serial.print(temp);Serial.print(" ");Serial.println(temp2);
     if(col==(NUM_COL-1))
     {
       col=0;
       row++;
     }  
-    else{//88='x'
+    else{//120='x'
       if(temp.toInt()==120)str_rdy=1;
       else if(str_rdy==1)
       {Serial.print("x");
@@ -242,12 +244,13 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
       }
       }  
   }
+  Serial.print("racun:");Serial.println(row*120+col);
   //ko mine zapisovanje slike se zapiše še text:
 
   beseda="";
   char_count=0;
-  while(file.available()&&(char_count!=MAX_TEXT_SPLITS))
-  {
+  while(file.available()&&(char_count<MAX_TEXT_SPLITS))
+  {Serial.println("GLEDAM TEXT");
     temp=file.read();
     Serial.print(temp);
     beseda.concat(temp);
@@ -264,9 +267,10 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
 
 
 void setup() {
-  //tft.initR(INITR_BLACKTAB);
-  //tft.setRotation(0);
-  //tft.fillScreen(ST7735_BLACK);
+  tft.initR(INITR_BLACKTAB);
+  tft.setRotation(0);
+  tft.fillScreen(ST7735_BLACK);
+  dacWrite(TFT_LED, 255);
 
   pinMode(pushButton_pin, INPUT_PULLUP);
   attachInterrupt(pushButton_pin, isr, FALLING);
@@ -278,22 +282,34 @@ void setup() {
 
   WIFI();
   const uint8_t izbrani_dan=spiffs_boot();
-  SPIFF2BUFF(SPIFFS,imena_dir[izbrani_dan]);
+  //SPIFF2BUFF(SPIFFS,imena_dir[izbrani_dan]);
   wifi_off();
+readFile(SPIFFS,imena_dir[0]);
 
+  /*
   for(uint8_t vrstice=0;vrstice<160;vrstice++)
   {
     for(uint8_t stolpci=0;stolpci<120;stolpci++)
-    {
-      Serial.print(img_buffer[vrstice][stolpci]);
+    {Serial.print(vrstice);Serial.print("|");Serial.print(stolpci);Serial.print("|");
+      Serial.println(img_buffer[vrstice][stolpci]);
     }
-    Serial.println("");
   }
   Serial.println("konec slike");
     for(uint8_t txt=0;txt<4;txt++)
     {
       Serial.println(text_buffer[txt]);
     }
+
+  for(uint8_t rows=0;rows<NUM_ROW;rows++)
+  {
+    for(uint8_t cols=0;cols<NUM_COL;cols++)
+    {
+      tft.drawPixel(cols, rows, img_buffer[rows][cols] );
+ 
+    }
+  }
+  */
+  
   //for(uint8_t datoteka=0;datoteka<7;datoteka++)file.read(SPIFFS,imena_dir[datoteka]);
   
   //zapiši pravilno sliko v img_buffer
@@ -382,7 +398,7 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
 
     //če se je datum spremenil in je ponedeljek, updejta nabor:
     /*if(date_state!=0 && date_info[0]==0)*/
-    //gsheets2spiff();
+    gsheets2spiff();
     
     return date_info[0];
     }
@@ -449,15 +465,19 @@ void gsheets2spiff(void)//TEST
         
         if (httpCode > 0) { //Check for the returning code
               payload = http.getString();
-              Serial.println("got payload");
+              //Serial.println("got payload");
               //Serial.println(httpCode);
               //Serial.println(payload);
               //if(spiffs_flag)
               //{
-
-                const uint16_t substring_length=500;
-                for(uint8_t sub=0;sub<(payload.length()/substring_length+1);sub++)appendFile(SPIFFS,imena_dir[slika_no],payload.substring(sub*substring_length,(sub+1)*substring_length));  
-                
+              //Serial.println(payload.length());
+                uint16_t substring_length=500;
+                for(uint16_t sub=0;sub<((payload.length()/substring_length)+1);sub++)
+                {appendFile(SPIFFS,imena_dir[slika_no],payload.substring(sub*substring_length,(sub+1)*substring_length));  
+                  Serial.print(sub);Serial.print(" ");
+                  Serial.print(payload.substring(sub*substring_length,(sub+1)*substring_length));
+                  Serial.println(" ");
+                  }
           
                   //spodnje ni nujno:
                 
