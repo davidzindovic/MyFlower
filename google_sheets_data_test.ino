@@ -32,7 +32,7 @@
   const char * ssid_home = "test";
   const char * password_home = "test";
 
-  String GOOGLE_SCRIPT_ID = "AKfycbyQ_eHtCS06jt1yHz9jyOg7-h_NhGWG08Rhe8rofd5MHp1Ldw8fGTjHKuxKNSSRL56v";
+  const String GOOGLE_SCRIPT_ID = "AKfycbyQ_eHtCS06jt1yHz9jyOg7-h_NhGWG08Rhe8rofd5MHp1Ldw8fGTjHKuxKNSSRL56v";
 
   const int sendInterval = 100;
   /* KONEC USER CHANGES */
@@ -55,14 +55,14 @@
   #define IME_SLIKE 10 // slika1\r\n vzame prvih 10 znakov
   #define NUM_DAYS 7
 
-  String imena_dir[8]={"/slika1.txt","/slika2.txt","/slika3.txt","/slika4.txt","/slika5.txt","/slika6.txt","/slika7.txt"," "};
-  String spif_log="/log.txt";
+  const String imena_dir[8]={"/slika1.txt","/slika2.txt","/slika3.txt","/slika4.txt","/slika5.txt","/slika6.txt","/slika7.txt"," "};
+  const String spif_log="/log.txt";
 
   //locljivost slike:
   #define NUM_ROW 160
   #define NUM_COL 120
 
-  int img_buffer[NUM_ROW+1][NUM_COL+1];
+  uint16_t img_buffer[NUM_ROW+1][NUM_COL+1];
 
   #define MAX_CHAR_AT_ONCE 60
   #define MAX_TEXT_SPLITS 4
@@ -76,11 +76,6 @@
   const char* ntpServer = "pool.ntp.org";
   const long  gmtOffset_sec = 0;
   const int   daylightOffset_sec = 3600;
-  const uint8_t day_info=0;
-  uint8_t week_day=0;
-  uint8_t day_of_month=0;
-  uint8_t month=0;
-  uint8_t year=0;
   /* KONEC DATUM STUFFA         */
 
   //-------------------------------------------------------
@@ -103,15 +98,15 @@ void IRAM_ATTR isr()
 }
 
 bool readFile(fs::FS &fs, /*const char * */ String path) {
-  Serial.printf("Reading file: %s\r\n", path);
+  //Serial.printf("Reading file: %s\r\n", path);
   bool fail=0;
   File file = fs.open(path);
   if (!file || file.isDirectory()) {
-    Serial.println("- failed to open file for reading");
+    //Serial.println("- failed to open file for reading");
     return fail;
   }
 
-  Serial.println("- read from file:");
+  //Serial.println("- read from file:");
   while (file.available()) {
     Serial.write(file.read());
   }
@@ -121,7 +116,7 @@ bool readFile(fs::FS &fs, /*const char * */ String path) {
 }
 
 String readFile1Char(fs::FS &fs, const char *path, uint8_t which_char) {
-  Serial.printf("Reading file: %s\r\n", path);
+  //Serial.printf("Reading file: %s\r\n", path);
   bool fail=0;
   File file = fs.open(path);
   while (!file || file.isDirectory()) {
@@ -146,34 +141,35 @@ String readFile1Char(fs::FS &fs, const char *path, uint8_t which_char) {
   return znak;
 }
 
-void writeFile(fs::FS &fs, /*const char * */ String path, /*const char * */String message) {
-  Serial.printf("Writing file: %s\r\n", path);
+void writeFile(fs::FS &fs, /*const char * */ String path) {//, /*const char * */String message
+  //Serial.printf("Writing file: %s\r\n", path);
 
   File file = fs.open(path, FILE_WRITE);
   if (!file) {
-    Serial.println("- failed to open file for writing");
+    //Serial.println("- failed to open file for writing");
     return;
   }
+  /*
   if (file.print(message)) {
     Serial.println("- file written");
   } else {
     Serial.println("- write failed");
-  }
+  }*/
   file.close();
 }
 
 void appendFile(fs::FS &fs, /*const char * */ String path, String message) {
-  Serial.printf("Appending to file: %s\r\n", path);
+  //Serial.printf("Appending to file: %s\r\n", path);
 
   File file = fs.open(path, FILE_APPEND);
   if (!file) {
-    Serial.println("- failed to open file for appending");
+    //Serial.println("- failed to open file for appending");
     return;
   }
   if (file.print(message)) {
-    Serial.println("- message appended");
+    //Serial.println("- message appended");
   } else {
-    Serial.println("- append failed");
+    //Serial.println("- append failed");
   }
   file.close();
 }
@@ -198,11 +194,11 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   {
     File file = fs.open(path);
     if (!file || file.isDirectory()) {
-      Serial.println("- failed to open file for reading");
+      //Serial.println("- failed to open file for reading");
       return;
     }
 
-    Serial.println("- read from file:");
+    //Serial.println("- read from file:");
     
     for(uint8_t skip=0;skip<IME_SLIKE;skip++)
     {
@@ -221,7 +217,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
     
       temp=file.read();
     
-    if(col==NUM_COL && temp=="n")
+    if(col==(NUM_COL-1))
     {
       col=0;
       row++;
@@ -235,6 +231,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
       }
       if(char_count==4)
       {
+        //Serial.println(string2header(beseda));
         img_buffer[row][col]=string2header(beseda);
         col++;
         beseda="";
@@ -276,11 +273,25 @@ void setup() {
   #endif
 
   WIFI();
-  uint8_t izbrani_dan=spiffs_boot()
-  //gsheets2spiff();
-  //SPIFF2BUFF(SPIFFS,imena_dir[izbrani_dan]);
+  const uint8_t izbrani_dan=spiffs_boot();
+  SPIFF2BUFF(SPIFFS,imena_dir[izbrani_dan]);
   wifi_off();
-
+/*
+  for(uint8_t vrstice=0;vrstice<160;vrstice++)
+  {
+    for(uint8_t stolpci=0;stolpci<120;stolpci++)
+    {
+      Serial.print(img_buffer[vrstice][stolpci]);
+    }
+    Serial.println("");
+  }
+  Serial.println("konec slike");
+    for(uint8_t txt=0;txt<4;txt++)
+    {
+      Serial.println(text_buffer[txt]);
+    }*/
+  //for(uint8_t datoteka=0;datoteka<7;datoteka++)file.read(SPIFFS,imena_dir[datoteka]);
+  
   //zapiši pravilno sliko v img_buffer
   
 }
@@ -291,14 +302,15 @@ void loop() {
 
 uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
   { uint8_t state_code=0;
-    uint8_t pic_of_the_day=0;
   /*
     0= neutral
     1= new/formated
     2= ready to read
   */
     if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
+    #if DEBUG
     Serial.println("SPIFFS Mount Failed");
+    #endif
     spiffs_flag=0;
   }
   /*
@@ -313,8 +325,10 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     if(!readFile(SPIFFS,"/log.txt"))
     {//ce ni log.txt filea se ga naredi. 
     //Torej je nov boot in se naredi tud slike na novo
-      writeFile(SPIFFS,"/log.txt","");
+      writeFile(SPIFFS,"/log.txt");
+          #if DEBUG
       Serial.println("naredu log");
+          #endif
       state_code=1;
     }
     else
@@ -322,11 +336,9 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     int date_info[10];
     if(WiFi.status()==WL_CONNECTED)
     {
-    Serial.print("updejtnu cajt ");
     struct tm timeinfo;    
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-    Serial.println(getLocalTime(&timeinfo));
-      //printLocalTime();
+    getLocalTime(&timeinfo);
     
     date_info[0]=timeinfo.tm_wday;
     date_info[0]=date_info[0]-(date_info[0]!=0)+6*(date_info[0]==0);
@@ -349,21 +361,24 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
             else date_state+=2;
           }
       }
-    Serial.println(date_state);
     }
     deleteFile(SPIFFS,"/log.txt");  
     uint32_t vsota_datum=0;
     for(uint8_t datum=0;datum<8;datum++)vsota_datum+=(date_info[datum]*pow(10,7-datum));
-    writeFile(SPIFFS,"/log.txt",String(vsota_datum));
+    writeFile(SPIFFS,"/log.txt");
+    appendFile(SPIFFS,"/log.txt",String(vsota_datum));
 
     for(uint8_t name_list;name_list<NUM_DAYS;name_list++)
       {
-        if(!availableFile(SPIFFS,imena_dir[name_list])){writeFile(SPIFFS,imena_dir[name_list],"Slika1\r\n");Serial.print("naredu sliko");Serial.println(name_list);}
-        else Serial.print("ŽE narjena slika");Serial.println(name_list);
+        if(!availableFile(SPIFFS,imena_dir[name_list])){writeFile(SPIFFS,imena_dir[name_list]);}
+        //else ;
       }
     
-    Serial.println(vsota_datum);
     readFile(SPIFFS,"/log.txt");
+
+    //če se je datum spremenil in je ponedeljek, updejta nabor:
+    /*if(date_state!=0 && date_info[0]==0)*/gsheets2spiff();
+    
     return date_info[0];
     }
     return 10;
@@ -381,7 +396,7 @@ bool WIFI()
   while ((WiFi.status() != WL_CONNECTED) && (wifi_attempt<5)) {
     delay(500);
     wifi_attempt++;
-    Serial.print(".");
+    //Serial.print(".");
   }
   wifi_attempt=0;
   if(WiFi.status() != WL_CONNECTED)
@@ -390,7 +405,7 @@ bool WIFI()
     while ((WiFi.status() != WL_CONNECTED) && (wifi_attempt<5)) {
     delay(500);
     wifi_attempt++;
-    Serial.print("."); 
+    //Serial.print("."); 
   }
   if(WiFi.status() == WL_CONNECTED)wifi_success=1;
   }
@@ -408,26 +423,19 @@ void gsheets2spiff(void)//TEST
   //static uint8_t slika_num=0;
   //static uint8_t slika_vrstica=0;
   HTTPClient http;
-  String url="https://script.google.com/macros/s/"+GOOGLE_SCRIPT_ID+"/exec?read";
+  const String url="https://script.google.com/macros/s/"+GOOGLE_SCRIPT_ID+"/exec?read";
 
-  //mogoce morajo biti ti 2 oz 3 vrstice v foru
-  /*
-  Serial.print("Making a request  ");
-  http.begin(url.c_str()); //Specify the URL and certificate
-  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  String payload;
-  int httpCode=0;
-*/
+
   for(uint8_t slika_no=0;slika_no<7;slika_no++)
   { //sheets sam ve kaj ti mora podat
-    //deleteFile(SPIFFS,imena_dir[slika_no]);
-    //writeFile(SPIFFS,imena_dir[slika_no],"Slikan\r\n");  
+    deleteFile(SPIFFS,imena_dir[slika_no]);
+    writeFile(SPIFFS,imena_dir[slika_no]);  
     for(uint8_t slika_vrstica=0;slika_vrstica<2;slika_vrstica++)
     {//samo vrstice ker payload je ena vrstica
      //vrstica 161 je tekst za izpis
         //while(httpCode<=0)
         
-        Serial.print("Making a request  ");
+        //Serial.print("Making a request  ");
         http.begin(url.c_str()); //Specify the URL and certificate
         http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
         String payload;
@@ -436,39 +444,21 @@ void gsheets2spiff(void)//TEST
         
         if (httpCode > 0) { //Check for the returning code
               payload = http.getString();
-              
+              Serial.print("got payload");
               //Serial.println(httpCode);
-              Serial.println(payload);
+              //Serial.println(payload);
               //if(spiffs_flag)
               //{
+
+                const uint16_t substring_length=500;
+                for(uint8_t sub=0;sub<(payload.length()/substring_length+1);sub++)appendFile(SPIFFS,imena_dir[slika_no],payload.substring(sub*substring_length,(sub+1)*substring_length));  
                 
-                
-                //appendFile(SPIFFS,imena_dir[slika_no],payload);
+          
                   //spodnje ni nujno:
                 
                 //appendFile(SPIFFS,imena_dir[slika_no],"\r\n");
               
-              
-              //}
-              /*
-              if(payload.length()>20)
-              {
-                for(int a=0;a<120;a++)
-                {
-                  Serial.print(payload.substring(a*8+2,a*8+4+2));
-                  Serial.print("  ");
-                  char beseda[5];
-                  String payload_temp=payload.substring(a*8+2,a*8+4+2);
-                  payload_temp.toCharArray(beseda,5);
-                  //payload.substring(a*8+2,a*8+6+2);
-                  Serial.println(string2header(beseda));
-                  //int num = (int)strtol(hex, NULL, 16);
-                  //Serial.print("   ");
-                  //Serial.println(num); 
-                  //vzame samo kar je za 0x
-                }
-              }
-              */
+            
               //tft.println(payload);
             }
           else { //ne bi smelo priti do tega
