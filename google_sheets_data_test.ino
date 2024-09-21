@@ -3,6 +3,7 @@
 
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 /*to do
+    - specificna crka za tekst buffer
   - probaj da nalozi novo sliko
   ?- tekst buffer
   - tekst - > barve za prikaz pa to. Test število znakov
