@@ -3,8 +3,8 @@
 
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 /*to do
-  - tekst - > barve za prikaz pa to. Test število znakov
-  - error http request!!!!
+  - defektne slike!!!!!!!!
+ ? - error http request!!!!
   - če nima neta - pravilno naložen datum - ista zadeva iz spiffa
 */
 
@@ -499,7 +499,7 @@ void gsheets2spiff(void)//TEST
       String payload;
       int httpCode = 0;
       httpCode = http.GET();
-
+        //ZAFUK VRJETNO TUKAJ
       if (httpCode > 0) { //Check for the returning code
         payload = http.getString();
         uint32_t substring_length = 500;
