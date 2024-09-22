@@ -3,11 +3,9 @@
 
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 /*to do
-    - specificna crka za tekst buffer
-  - probaj da nalozi novo sliko
-  ?- tekst buffer
   - tekst - > barve za prikaz pa to. Test število znakov
   - error http request!!!!
+  - če nima neta - pravilno naložen datum - ista zadeva iz spiffa
 */
 
 #define DEBUG 1
@@ -64,9 +62,11 @@ const String spif_log = "/log.txt";
 
 uint16_t img_buffer[NUM_ROW + 1][NUM_COL + 1];
 
-#define MAX_CHAR_AT_ONCE 60
+#define MAX_CHAR_AT_ONCE 100
 #define MAX_TEXT_SPLITS 4
 String text_buffer[MAX_TEXT_SPLITS];
+uint8_t current_text_pages=0;
+uint16_t text_char_count=0;
 /* KONEC SLIKE STUFF  */
 
 //------------------------------------------------------------
@@ -87,13 +87,13 @@ bool spiffs_flag = 1;
 /*    KONEC SPIFFS    */
 
 //---------------------------------------------------------
-bool tipka = 0;
-
+uint8_t tipka = 0;
+bool tipka_change=1;
+uint32_t timek = 0;
 
 void IRAM_ATTR isr()
 {
-  static uint32_t timek = 0;
-  if ((millis() - timek) >= 300)tipka = !tipka;
+  if ((millis() - timek) >= 300){tipka++;tipka_change=1;}
   timek = millis();
 }
 
@@ -222,58 +222,68 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   uint8_t row = 0;
 
   //while(row<NUM_ROW && (temp.toInt()!=(-1)))
-  while (((row * 120 + col) < 96000) && ((temp-'0')<=9)||((temp-'a')<=5)||(temp=='x'))
+  while ((((row * 120 + col) < 96000) && ((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
   { //premisli ce rabis kje file.available()
 
     temp = file.read();
-    if(((temp-'0')<=9)||((temp-'a')<=5)||(temp=='x'))
+    if ((((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
     {
-    //char temp2 = temp.charAt(0);
-    Serial.print(col); Serial.print(" "); Serial.print(row); Serial.print(" "); Serial.println(temp);// Serial.print(" "); Serial.println(temp2);
-    if (col == (NUM_COL - 1))
-    {
-      col = 0;
-      row++;
-    }
-    else {
-      if (temp == 'x')str_rdy = 1;
-      else if (str_rdy == 1)
-      { Serial.println("-------"); Serial.println("");
-        beseda.concat(temp);
-        char_count++;
-      }
-      if (char_count == 4)
+      //char temp2 = temp.charAt(0);
+      //Serial.print(col); Serial.print(" "); Serial.print(row); Serial.print(" "); Serial.println(temp);// Serial.print(" "); Serial.println(temp2);
+      if (col == (NUM_COL - 1))
       {
-        //Serial.println(string2header(beseda));
-        img_buffer[row][col] = string2header(beseda);
-        Serial.println(beseda);
-        col++;
-        beseda = "";
-        str_rdy = 0;
-        char_count = 0;
+        col = 0;
+        row++;
+      }
+      else {
+        if (temp == 'x')str_rdy = 1;
+        else if (str_rdy == 1)
+        { //Serial.println("-------"); Serial.println("");
+          beseda.concat(temp);
+          char_count++;
+        }
+        if (char_count == 4)
+        {
+          //Serial.println(string2header(beseda));
+          img_buffer[row][col] = string2header(beseda);
+          //Serial.println(beseda);
+          col++;
+          beseda = "";
+          str_rdy = 0;
+          char_count = 0;
+        }
       }
     }
-  }
-  else Serial.println("zajeb");
+    else Serial.println("zajeb");
   }
   //Serial.print("racun:");Serial.println(row*120+col);
   //ko mine zapisovanje slike se zapiše še text:
 
   beseda = "";
   char_count = 0;
+  bool at_least_one_text = 0;
   while (file.available() && (char_count < MAX_TEXT_SPLITS))
-  { Serial.println("GLEDAM TEXT");
+  { //Serial.print("GLEDAM TEXT ");
     temp = file.read();
-    Serial.print(temp);
+    //Serial.println(temp);
     beseda.concat(temp);
+    //Serial.println(beseda);
     if (beseda.length() == MAX_CHAR_AT_ONCE)
     {
       text_buffer[char_count] = beseda;
-      Serial.println(beseda);
+      //Serial.println(beseda);
       beseda = "";
       char_count++;
+      current_text_pages++;
+      at_least_one_text = 1;
     }
   }
+  if(!(char_count==MAX_TEXT_SPLITS))
+  {
+  text_buffer[char_count] = beseda; //zapiše ostanek texta
+  current_text_pages++;
+  }
+  //Serial.print("Curent text pages: ");Serial.println(current_text_pages);
   file.close();
 }
 
@@ -296,9 +306,10 @@ void setup() {
   const uint8_t izbrani_dan = spiffs_boot();
   SPIFF2BUFF(SPIFFS, imena_dir[izbrani_dan]);
   wifi_off();
-  readFile(SPIFFS, imena_dir[0]);
-  Serial.println("");
 
+/*
+#if DEBUG
+  Serial.println("");
   for (uint8_t vrstice = 0; vrstice < 160; vrstice++)
   {
     for (uint8_t stolpci = 0; stolpci < 120; stolpci++)
@@ -312,25 +323,19 @@ void setup() {
   {
     Serial.println(text_buffer[txt]);
   }
-
-  for (uint8_t rows = 0; rows < NUM_ROW; rows++)
-  {
-    for (uint8_t cols = 0; cols < NUM_COL; cols++)
-    {
-      tft.drawPixel(cols, rows, img_buffer[rows][cols] );
-
-    }
-  }
-
-
-  //for(uint8_t datoteka=0;datoteka<7;datoteka++)file.read(SPIFFS,imena_dir[datoteka]);
-
-  //zapiši pravilno sliko v img_buffer
+#endif
+*/
 
 }
 
 void loop() {
+if(tipka_change==1)
+{ tipka_change=0;
+  if(tipka>(current_text_pages))tipka=0;
+  if(tipka==0)PrikazSlike();
+  else PrikazTexta(tipka-1);
 
+}
 }
 
 uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
@@ -456,8 +461,6 @@ void wifi_off()
 
 void gsheets2spiff(void)//TEST
 {
-  //static uint8_t slika_num=0;
-  //static uint8_t slika_vrstica=0;
   HTTPClient http;
   const String url = "https://script.google.com/macros/s/" + GOOGLE_SCRIPT_ID + "/exec?read";
 
@@ -467,11 +470,7 @@ void gsheets2spiff(void)//TEST
     deleteFile(SPIFFS, imena_dir[slika_no]);
     writeFile(SPIFFS, imena_dir[slika_no]);
     for (uint8_t slika_vrstica = 0; slika_vrstica < 2; slika_vrstica++)
-    { //samo vrstice ker payload je ena vrstica
-      //vrstica 161 je tekst za izpis
-      //while(httpCode<=0)
-
-      //Serial.print("Making a request  ");
+    {
       http.begin(url.c_str()); //Specify the URL and certificate
       http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
       String payload;
@@ -480,26 +479,17 @@ void gsheets2spiff(void)//TEST
 
       if (httpCode > 0) { //Check for the returning code
         payload = http.getString();
-        //Serial.println("got payload");
-        //Serial.println(httpCode);
-        //Serial.println(payload);
-        //if(spiffs_flag)
-        //{
-        //Serial.println(payload.length());
         uint16_t substring_length = 500;
         for (uint16_t sub = 0; sub < ((payload.length() / substring_length) + 1); sub++)
         { appendFile(SPIFFS, imena_dir[slika_no], payload.substring(sub * substring_length, (sub + 1)*substring_length));
+/*
+          #if DEBUG
           Serial.print(sub); Serial.print(" ");
           Serial.print(payload.substring(sub * substring_length, (sub + 1)*substring_length));
           Serial.println(" ");
+          #endif*/
         }
 
-        //spodnje ni nujno:
-
-        //appendFile(SPIFFS,imena_dir[slika_no],"\r\n");
-
-
-        //tft.println(payload);
       }
       else { //ne bi smelo priti do tega
         Serial.println("Error on HTTP request");
@@ -525,4 +515,32 @@ int string2header(String s)
     else break;
   }
   return x;
+}
+
+void PrikazSlike(void)
+{
+  uint8_t shift = 0;
+  for (uint8_t rows = 0 + shift; (rows + shift) < NUM_ROW; rows++)
+  {
+    for (uint8_t cols = 0 + shift; (cols + shift) < NUM_COL; cols++)
+    {
+      tft.drawPixel(cols + shift, rows + shift, img_buffer[rows][cols] );
+
+    }
+  }
+}
+
+void PrikazTexta(uint8_t page)
+{ 
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setTextColor(ST77XX_RED);
+  tft.setTextSize(2);
+  tft.setTextWrap(true);
+  tft.setCursor(0, 0);
+  //char text[] = text_buffer[page];
+  for(uint16_t i=0;i<MAX_CHAR_AT_ONCE;i++)
+  {
+
+    tft.print(text_buffer[page].charAt(i));
+  }
 }
