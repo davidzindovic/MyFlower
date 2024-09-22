@@ -30,7 +30,7 @@ const char * password_hotspot = "mladizmaji";
 const char * ssid_home = "AirTies_Air4920_844H";
 const char * password_home = "test";
 
-const String GOOGLE_SCRIPT_ID = "AKfycbyQ_eHtCS06jt1yHz9jyOg7-h_NhGWG08Rhe8rofd5MHp1Ldw8fGTjHKuxKNSSRL56v";
+const String GOOGLE_SCRIPT_ID = "AKfycbxDDEq001w_uSg3BwDbTU7PrSh5LI45b8olwJ6VrTY5CjufCwoP9T1h5-vtbnUaYlV3";
 
 const int sendInterval = 100;
 /* KONEC USER CHANGES */
@@ -53,6 +53,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RS
 #define IME_SLIKE 10 // slika1\r\n vzame prvih 10 znakov
 #define NUM_DAYS 7
 
+const String slikca= "/slikca.txt";
 const String imena_dir[8] = {"/slika1.txt", "/slika2.txt", "/slika3.txt", "/slika4.txt", "/slika5.txt", "/slika6.txt", "/slika7.txt", " "};
 const String spif_log = "/log.txt";
 
@@ -76,6 +77,7 @@ uint16_t text_char_count=0;
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600;
+uint8_t izbrani_dan=0;
 /* KONEC DATUM STUFFA         */
 
 //-------------------------------------------------------
@@ -207,22 +209,15 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
     return;
   }
 
-  //Serial.println("- read from file:");
-
-  //for(uint8_t skip=0;skip<IME_SLIKE;skip++)
-  //{
-  //  Serial.print(file.read()); //preskocis ime slike pol pa začneš pr podatkih
-  //}
-  //POPRAVIII!!!!!!
   char temp;
   String beseda = "";
   bool str_rdy = 0;
   uint8_t char_count = 0;
-  uint8_t col = 0;
-  uint8_t row = 0;
+  uint16_t col = 0;
+  uint16_t row = 0;
 
   //while(row<NUM_ROW && (temp.toInt()!=(-1)))
-  while ((((row * 120 + col) < 96000) && ((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
+  while ((((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
   { //premisli ce rabis kje file.available()
 
     temp = file.read();
@@ -303,8 +298,10 @@ void setup() {
 #endif
 
   WIFI();
-  const uint8_t izbrani_dan = spiffs_boot();
-  SPIFF2BUFF(SPIFFS, imena_dir[izbrani_dan]);
+  izbrani_dan = spiffs_boot();
+  //SPIFF2BUFF(SPIFFS, imena_dir[izbrani_dan]);
+  SPIFF2BUFF(SPIFFS,slikca);
+  //PrikazSlike();
   wifi_off();
 
 /*
@@ -334,8 +331,12 @@ if(tipka_change==1)
   if(tipka>(current_text_pages))tipka=0;
   if(tipka==0)PrikazSlike();
   else PrikazTexta(tipka-1);
-
+  if(tipka>6)tipka=0;
+  //SPIFF2BUFF(SPIFFS, imena_dir[tipka]);
+  //PrikazSlike();
 }
+
+
 }
 
 uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
@@ -399,26 +400,26 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
             else date_state += 2;
           }
         }
-      }
       deleteFile(SPIFFS, "/log.txt");
       uint32_t vsota_datum = 0;
       for (uint8_t datum = 0; datum < 8; datum++)vsota_datum += (date_info[datum] * pow(10, 7 - datum));
       writeFile(SPIFFS, "/log.txt");
       appendFile(SPIFFS, "/log.txt", String(vsota_datum));
+      }
+      else date_info[0]=readFile1Char(SPIFFS,"/log.txt",0).toInt();
 
-      for (uint8_t name_list; name_list < NUM_DAYS; name_list++)
+/*      for (uint8_t name_list; name_list < NUM_DAYS; name_list++)
       {
         if (!availableFile(SPIFFS, imena_dir[name_list])) {
           writeFile(SPIFFS, imena_dir[name_list]);
         }
-        //else ;
-      }
+      }*/
 
-      readFile(SPIFFS, "/log.txt");
+      if (!availableFile(SPIFFS, slikca)) {
+          writeFile(SPIFFS,slikca);}
 
       //če se je datum spremenil in je ponedeljek, updejta nabor:
-      /*if(date_state!=0 && date_info[0]==0)*/
-      gsheets2spiff();
+      /*if(date_state!=0 && date_info[0]==0)*/gsheets2spiff();
 
       return date_info[0];
     }
@@ -429,9 +430,16 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
 
 bool WIFI()
 {
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setTextColor(ST77XX_RED);
+  tft.setTextSize(2);
+  tft.setTextWrap(true);
+  tft.setCursor(0, 0);
+  tft.print("WiFi Doma");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid_home, password_home);
 
+  
   uint8_t wifi_attempt = 0;
   bool wifi_success = 0;
   while ((WiFi.status() != WL_CONNECTED) && (wifi_attempt < 5)) {
@@ -442,6 +450,13 @@ bool WIFI()
   wifi_attempt = 0;
   if (WiFi.status() != WL_CONNECTED)
   {
+  tft.setCursor(0, 20);
+  tft.print("Hotspot");
+  tft.setCursor(0, 40);
+  tft.print("ime: Linc");
+  tft.setCursor(0, 60);
+  tft.print("geslo:PINC");
+  
     WiFi.begin(ssid_hotspot, password_hotspot);
     while ((WiFi.status() != WL_CONNECTED) && (wifi_attempt < 5)) {
       delay(500);
@@ -464,12 +479,20 @@ void gsheets2spiff(void)//TEST
   HTTPClient http;
   const String url = "https://script.google.com/macros/s/" + GOOGLE_SCRIPT_ID + "/exec?read";
 
+//zakomentirano da louda samo 1 sliko za 1 dan
+ // for (uint8_t slika_no = 0; slika_no < 7; slika_no++)
+ // { //sheets sam ve kaj ti mora podat
+    //deleteFile(SPIFFS, imena_dir[izbrani_dan]);
+    //writeFile(SPIFFS, imena_dir[izbrani_dan]);
 
-  for (uint8_t slika_no = 0; slika_no < 7; slika_no++)
-  { //sheets sam ve kaj ti mora podat
-    deleteFile(SPIFFS, imena_dir[slika_no]);
-    writeFile(SPIFFS, imena_dir[slika_no]);
-    for (uint8_t slika_vrstica = 0; slika_vrstica < 2; slika_vrstica++)
+    if (WiFi.status() == WL_CONNECTED)
+    {
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(0, 0);
+    tft.print("LoudaSliko");  
+    deleteFile(SPIFFS,slikca);
+    writeFile(SPIFFS, slikca);
+    for (uint8_t slika_vrstica = 0; slika_vrstica < 3; slika_vrstica++)
     {
       http.begin(url.c_str()); //Specify the URL and certificate
       http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
@@ -479,9 +502,9 @@ void gsheets2spiff(void)//TEST
 
       if (httpCode > 0) { //Check for the returning code
         payload = http.getString();
-        uint16_t substring_length = 500;
-        for (uint16_t sub = 0; sub < ((payload.length() / substring_length) + 1); sub++)
-        { appendFile(SPIFFS, imena_dir[slika_no], payload.substring(sub * substring_length, (sub + 1)*substring_length));
+        uint32_t substring_length = 500;
+        for (uint32_t sub = 0; sub < ((payload.length() / substring_length) + 1); sub++)
+        { appendFile(SPIFFS, /*imena_dir[izbrani_dan]*/ slikca, payload.substring(sub * substring_length, (sub + 1)*substring_length));
 /*
           #if DEBUG
           Serial.print(sub); Serial.print(" ");
@@ -496,14 +519,23 @@ void gsheets2spiff(void)//TEST
       }
       http.end(); delay(100);
     }
-  }
+    }
+    else
+    {
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(0, 0);
+    tft.print("Ni Wifija");
+    tft.setCursor(0, 20);
+    tft.print("za loudat"); 
+    }
+  //}
 }
 
 
-int string2header(String s)
+uint32_t string2header(String s)
 {
-  int x = 0;
-  uint8_t cnt = 0; // char count
+  uint32_t x = 0;
+  uint32_t cnt = 0; // char count
   while (cnt != 4) //mora prebrati vse 4 podatke 0x _ _ _ _
   {
     cnt++;
@@ -518,14 +550,14 @@ int string2header(String s)
 }
 
 void PrikazSlike(void)
-{
-  uint8_t shift = 0;
-  for (uint8_t rows = 0 + shift; (rows + shift) < NUM_ROW; rows++)
+{ tft.fillScreen(ST77XX_BLACK);
+  tft.setCursor(0, 0);
+  uint32_t shift = 5;
+  for (uint32_t rows = 0 + shift; (rows + shift) < NUM_ROW; rows++)
   {
-    for (uint8_t cols = 0 + shift; (cols + shift) < NUM_COL; cols++)
+    for (uint32_t cols = 0 + shift; (cols + shift) < NUM_COL; cols++)
     {
       tft.drawPixel(cols + shift, rows + shift, img_buffer[rows][cols] );
-
     }
   }
 }
