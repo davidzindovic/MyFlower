@@ -3,8 +3,7 @@
 
 // sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 /*to do
-  - defektne slike!!!!!!!!
- ? - error http request!!!!
+  -preveri datum in user izpise na display ob bootu
   - če nima neta - pravilno naložen datum - ista zadeva iz spiffa
 */
 
