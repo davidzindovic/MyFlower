@@ -27,10 +27,11 @@
 const char * ssid_hotspot = "monika";
 const char * password_hotspot = "mladizmaji";
 
-const char * ssid_home = "AirTies_Air4920_844H";
-const char * password_home = "test";
+//AirTies_Air4920_844H
+const char * ssid_home = "ALHN-F4DA";
+const char * password_home = "c57nvgLUA2";
 
-const String GOOGLE_SCRIPT_ID = "AKfycbxDDEq001w_uSg3BwDbTU7PrSh5LI45b8olwJ6VrTY5CjufCwoP9T1h5-vtbnUaYlV3";
+const String GOOGLE_SCRIPT_ID = "AKfycbwYkMkvborS_5SNyjGM7uDFZ0-i8JUyYT4Y2dDI7xBj6qJZeGnjEpV9wwGPVe_-uWE";
 
 const int sendInterval = 100;
 /* KONEC USER CHANGES */
@@ -59,7 +60,7 @@ const String spif_log = "/log.txt";
 
 //locljivost slike:
 #define NUM_ROW 160
-#define NUM_COL 120
+#define NUM_COL 128
 
 uint16_t img_buffer[NUM_ROW + 1][NUM_COL + 1];
 
@@ -202,33 +203,37 @@ bool availableFile(fs::FS &fs, String path)
   }
 }
 void SPIFF2BUFF(fs::FS &fs, String path)//TEST
-{ Serial.println(path);
+{ //Serial.println(path);
   File file = fs.open(path);
   if (!file || file.isDirectory()) {
     //Serial.println("- failed to open file for reading");
     return;
   }
 
-  char temp;
+  char temp='a';
   String beseda = "";
   bool str_rdy = 0;
   uint8_t char_count = 0;
   uint16_t col = 0;
   uint16_t row = 0;
 
+  uint8_t bl=0;
+
   //while(row<NUM_ROW && (temp.toInt()!=(-1)))
+  Serial.println("Zapisujem slike");
   while ((((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
   { //premisli ce rabis kje file.available()
-
+  //Serial.print(row);Serial.print(" | ");Serial.println(col);
     temp = file.read();
     if ((((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
     {
       //char temp2 = temp.charAt(0);
       //Serial.print(col); Serial.print(" "); Serial.print(row); Serial.print(" "); Serial.println(temp);// Serial.print(" "); Serial.println(temp2);
-      if (col == (NUM_COL - 1))
+      if (col == (NUM_COL-1))
       {
         col = 0;
         row++;
+        bl=0;
       }
       else {
         if (temp == 'x')str_rdy = 1;
@@ -238,10 +243,10 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
           char_count++;
         }
         if (char_count == 4)
-        {
+        {bl++;
+          //if(bl==50){Serial.print(beseda); Serial.print(" | ");Serial.print(row);Serial.print(" | ");Serial.println(col);}
           //Serial.println(string2header(beseda));
           img_buffer[row][col] = string2header(beseda);
-          //Serial.println(beseda);
           col++;
           beseda = "";
           str_rdy = 0;
@@ -253,7 +258,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   }
   //Serial.print("racun:");Serial.println(row*120+col);
   //ko mine zapisovanje slike se zapiše še text:
-
+  Serial.println("Konec zapisovanja slike");
   beseda = "";
   char_count = 0;
   bool at_least_one_text = 0;
@@ -303,7 +308,7 @@ void setup() {
   SPIFF2BUFF(SPIFFS,slikca);
   //PrikazSlike();
   wifi_off();
-
+  readFile(SPIFFS,"/slikca.txt");
 /*
 #if DEBUG
   Serial.println("");
@@ -492,17 +497,19 @@ void gsheets2spiff(void)//TEST
     tft.print("LoudaSliko");  
     deleteFile(SPIFFS,slikca);
     writeFile(SPIFFS, slikca);
-    for (uint8_t slika_vrstica = 0; slika_vrstica < 3; slika_vrstica++)
+    for (int slika_vrstica = 0; slika_vrstica < 4; slika_vrstica++)
     {
       http.begin(url.c_str()); //Specify the URL and certificate
       http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
       String payload;
       int httpCode = 0;
       httpCode = http.GET();
+      Serial.print("Pobral file dolg:");
         //ZAFUK VRJETNO TUKAJ
       if (httpCode > 0) { //Check for the returning code
         payload = http.getString();
         uint32_t substring_length = 500;
+        Serial.println(payload.length());
         for (uint32_t sub = 0; sub < ((payload.length() / substring_length) + 1); sub++)
         { appendFile(SPIFFS, /*imena_dir[izbrani_dan]*/ slikca, payload.substring(sub * substring_length, (sub + 1)*substring_length));
 /*
@@ -515,7 +522,9 @@ void gsheets2spiff(void)//TEST
 
       }
       else { //ne bi smelo priti do tega
-        Serial.println("Error on HTTP request");
+      Serial.println("Error on HTTP request");
+      http.POST(String(slika_vrstica));
+      slika_vrstica--;
       }
       http.end(); delay(100);
     }
@@ -532,10 +541,10 @@ void gsheets2spiff(void)//TEST
 }
 
 
-uint32_t string2header(String s)
+uint16_t string2header(String s)
 {
-  uint32_t x = 0;
-  uint32_t cnt = 0; // char count
+  uint16_t x = 0;
+  uint16_t cnt = 0; // char count
   while (cnt != 4) //mora prebrati vse 4 podatke 0x _ _ _ _
   {
     cnt++;
@@ -552,12 +561,12 @@ uint32_t string2header(String s)
 void PrikazSlike(void)
 { tft.fillScreen(ST77XX_BLACK);
   tft.setCursor(0, 0);
-  uint32_t shift = 5;
-  for (uint32_t rows = 0 + shift; (rows + shift) < NUM_ROW; rows++)
+  uint32_t shift = 0;
+  for (uint32_t rows = 0 ; rows < NUM_ROW; rows++)
   {
-    for (uint32_t cols = 0 + shift; (cols + shift) < NUM_COL; cols++)
+    for (uint32_t cols = 0 ; cols < NUM_COL; cols++)
     {
-      tft.drawPixel(cols + shift, rows + shift, img_buffer[rows][cols] );
+      tft.drawPixel(cols + shift,rows + shift, img_buffer[rows][cols] );
     }
   }
 }
