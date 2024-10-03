@@ -2,6 +2,7 @@ Navodila za uporabo:
 1. Izberi poljubno sliko
 
 2. Odpri image resizer
+
 2.1 Navigiraj v mapo in izberi sliko na levi strani
 2.2 Klikni Add, da doda v čakalno vrsto na desno (lahko več slik)
 2.3 Advanced options -> 128 širina, 160 višina, checkbox za aspect ratio prazen
