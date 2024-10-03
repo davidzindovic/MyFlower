@@ -21,7 +21,7 @@
 /*Things to change */
 
 const char * ssid_hotspot = "Lincica";
-const char * password_hotspot = "inlinc";
+const char * password_hotspot = "inlincnik";
 
 //AirTies_Air4920_844H
 const char * ssid_home = "AirTies_Air4920_844H";
@@ -283,6 +283,9 @@ void setup() {
   tft.setRotation(0);
   tft.fillScreen(ST7735_BLACK);
   dacWrite(TFT_LED, 255);
+  tft.setTextColor(ST77XX_RED);
+  tft.setTextSize(2);
+  tft.setTextWrap(true);
 
   pinMode(pushButton_pin, INPUT_PULLUP);
   attachInterrupt(pushButton_pin, isr, FALLING);
@@ -292,25 +295,33 @@ void setup() {
   delay(10);
 #endif
 
+  if(digitalRead(pushButton_pin)!=0)
+  {
   WIFI();
   uint8_t update_mby=spiffs_boot(); //ce vrne 0 se datum ni spremenil
   if(update_mby>0&&update_mby<100)gsheets2spiff();      //če se je datum spremenil updejta sliko:
-  else if(update_mby==0)
+  else if(update_mby==0 && (WiFi.status() == WL_CONNECTED))
   {
     tft.fillScreen(ST77XX_BLACK);
     tft.setCursor(0, 0);
     tft.print("Danasnja");
-    tft.setCursor(0, 40);
+    tft.setCursor(0, 20);
     tft.print("slika je ze");
-    tft.setCursor(0, 60);
+    tft.setCursor(0, 40);
     tft.print("prenesena");
-    tft.setCursor(0, 100);
+    tft.setCursor(0, 80);
     tft.setTextColor(ST77XX_BLUE);
     tft.print("Prikazujem");
     delay(2000);
   }
   if(update_mby!=100)SPIFF2BUFF(SPIFFS,slikca);
   wifi_off();
+  }
+  else 
+  {
+    spiffs_boot();
+    SPIFF2BUFF(SPIFFS,slikca);
+  }
 }
 
 void loop() {
@@ -392,9 +403,10 @@ uint8_t spiffs_boot(void)
         tft.setTextColor(ST77XX_BLUE);
         tft.print("Prikazujem");
         tft.setCursor(0, 80);
-        tft.print("Staro sliko");
+        tft.print("Staro");
+        tft.setCursor(0, 100);
+        tft.print("sliko");
         delay(2000);
-        //date_info[0]=readFile1Char(SPIFFS,"/log.txt",0).toInt();
       }
       bool fresh_pic_spiffs=0;
       if (!availableFile(SPIFFS, slikca)) {
@@ -436,9 +448,6 @@ uint8_t spiffs_boot(void)
 bool WIFI()
 {
   tft.fillScreen(ST77XX_BLACK);
-  tft.setTextColor(ST77XX_RED);
-  tft.setTextSize(2);
-  tft.setTextWrap(true);
   tft.setCursor(0, 0);
   tft.print("WiFi Doma");
   WiFi.mode(WIFI_STA);
@@ -469,7 +478,7 @@ bool WIFI()
   tft.print("geslo:");
   tft.setTextColor(ST77XX_GREEN);
   tft.setCursor(0, 100);
-  tft.print("inlinc");
+  tft.print("inlincnik");
   delay(2000);
     
     WiFi.begin(ssid_hotspot, password_hotspot);
