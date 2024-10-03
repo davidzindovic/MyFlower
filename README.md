@@ -1,6 +1,7 @@
 Navodila za uporabo:
 1. Izberi poljubno sliko
 
+
 2. Odpri image resizer
 
 2.1 Navigiraj v mapo in izberi sliko na levi strani
@@ -13,6 +14,7 @@ Navodila za uporabo:
 
 2.5 Convert
 
+
 3. Odpri LCD Image Converter
 
 3.1 File -> Open -> Odpri sliko (za vse enak postopek)
@@ -24,6 +26,7 @@ Navodila za uporabo:
 3.4 Zavihek Image -> Block size: 16bit
 
 3.5 Show Preview -> CTRL+A -> CTRL+C
+
 
 4. Odpri Google Sheets tabelo
 
