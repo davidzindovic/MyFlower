@@ -12,6 +12,7 @@ Navodila za uporabo:
 2.4 Output format: .jpg, poljubna destinacija za output in ime
 
 2.5 Convert
+
 ---------------------------------------------------------------------------
 3. Odpri LCD Image Converter
 
@@ -24,6 +25,7 @@ Navodila za uporabo:
 3.4 Zavihek Image -> Block size: 16bit
 
 3.5 Show Preview -> CTRL+A -> CTRL+C
+
 -----------------------------------------------------------------------------
 4. Odpri Google Sheets tabelo
 
