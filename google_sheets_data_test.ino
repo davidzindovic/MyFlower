@@ -1,13 +1,10 @@
-//Deployment code:
-//AKfycbxZ6U2Afg7i92aL91parhMBiAG7RL4J4UDH6ZdVWtUbktdmV2u6uC8lGxvphJVRBMnQ
-
-// sicer pa SPIFFS : https://www.tutorialspoint.com/esp32_for_iot/esp32_for_iot_spiffs_storage.htm
 /*to do
   -preveri datum in user izpise na display ob bootu
   - če nima neta - pravilno naložen datum - ista zadeva iz spiffa
 */
 
 #define DEBUG 1
+#define DEBUG_EXTRA 0
 
 #include <WiFi.h>
 #include "time.h"
@@ -23,14 +20,14 @@
 
 /*Things to change */
 
-const char * ssid_hotspot = "monika";
-const char * password_hotspot = "mladizmaji";
+const char * ssid_hotspot = "Lincica";
+const char * password_hotspot = "inlinc";
 
 //AirTies_Air4920_844H
-const char * ssid_home = "ALHN-F4DA";
-const char * password_home = "c57nvgLUA2";
+const char * ssid_home = "AirTies_Air4920_844H";
+const char * password_home = "phpmcy3979";
 
-const String GOOGLE_SCRIPT_ID = "AKfycbwYkMkvborS_5SNyjGM7uDFZ0-i8JUyYT4Y2dDI7xBj6qJZeGnjEpV9wwGPVe_-uWE";
+const String GOOGLE_SCRIPT_ID = "AKfycbwW8Bk7frI58Tzhnm2NXCpCEH5Yp2qvRjX4oouHivVn3EPQfRtJFsYgIBNAMNPWTYsV";
 
 const int sendInterval = 100;
 /* KONEC USER CHANGES */
@@ -54,7 +51,6 @@ Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RS
 #define NUM_DAYS 7
 
 const String slikca= "/slikca.txt";
-const String imena_dir[8] = {"/slika1.txt", "/slika2.txt", "/slika3.txt", "/slika4.txt", "/slika5.txt", "/slika6.txt", "/slika7.txt", " "};
 const String spif_log = "/log.txt";
 
 //locljivost slike:
@@ -77,7 +73,6 @@ uint16_t text_char_count=0;
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600;
-uint8_t izbrani_dan=0;
 /* KONEC DATUM STUFFA         */
 
 //-------------------------------------------------------
@@ -151,12 +146,7 @@ void writeFile(fs::FS &fs, /*const char * */ String path) {//, /*const char * */
     //Serial.println("- failed to open file for writing");
     return;
   }
-  /*
-    if (file.print(message)) {
-    Serial.println("- file written");
-    } else {
-    Serial.println("- write failed");
-    }*/
+
   file.close();
 }
 
@@ -205,7 +195,6 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
 { //Serial.println(path);
   File file = fs.open(path);
   if (!file || file.isDirectory()) {
-    //Serial.println("- failed to open file for reading");
     return;
   }
 
@@ -216,35 +205,33 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   uint16_t col = 0;
   uint16_t row = 0;
 
-  uint8_t bl=0;
-
-  //while(row<NUM_ROW && (temp.toInt()!=(-1)))
+  #if DEBUG_EXTRA
   Serial.println("Zapisujem slike");
+  #endif
+  
   while ((((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
-  { //premisli ce rabis kje file.available()
-  //Serial.print(row);Serial.print(" | ");Serial.println(col);
+  {
     temp = file.read();
     if ((((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
     {
-      //char temp2 = temp.charAt(0);
-      //Serial.print(col); Serial.print(" "); Serial.print(row); Serial.print(" "); Serial.println(temp);// Serial.print(" "); Serial.println(temp2);
+      #if DEBUG_EXTRA
+      Serial.print(col); Serial.print(" "); Serial.print(row); Serial.print(" "); Serial.println(temp);// Serial.print(" "); Serial.println(temp2);
+      #endif
+      
       if (col == (NUM_COL-1))
       {
         col = 0;
         row++;
-        bl=0;
       }
       else {
         if (temp == 'x')str_rdy = 1;
         else if (str_rdy == 1)
-        { //Serial.println("-------"); Serial.println("");
+        {
           beseda.concat(temp);
           char_count++;
         }
         if (char_count == 4)
-        {bl++;
-          //if(bl==50){Serial.print(beseda); Serial.print(" | ");Serial.print(row);Serial.print(" | ");Serial.println(col);}
-          //Serial.println(string2header(beseda));
+        {
           img_buffer[row][col] = string2header(beseda);
           col++;
           beseda = "";
@@ -253,24 +240,29 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
         }
       }
     }
-    else Serial.println("zajeb");
+    else 
+    {
+      #if DEBUG_EXTRA
+      Serial.println("zajeb");
+      #endif
+    }
   }
-  //Serial.print("racun:");Serial.println(row*120+col);
   //ko mine zapisovanje slike se zapiše še text:
+  #if DEBUG_EXTRA
   Serial.println("Konec zapisovanja slike");
+  #endif DEBUG_EXTRA
+  
   beseda = "";
   char_count = 0;
   bool at_least_one_text = 0;
   while (file.available() && (char_count < MAX_TEXT_SPLITS))
-  { //Serial.print("GLEDAM TEXT ");
+  {
     temp = file.read();
-    //Serial.println(temp);
     beseda.concat(temp);
-    //Serial.println(beseda);
+
     if (beseda.length() == MAX_CHAR_AT_ONCE)
     {
       text_buffer[char_count] = beseda;
-      //Serial.println(beseda);
       beseda = "";
       char_count++;
       current_text_pages++;
@@ -282,7 +274,6 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
   text_buffer[char_count] = beseda; //zapiše ostanek texta
   current_text_pages++;
   }
-  //Serial.print("Curent text pages: ");Serial.println(current_text_pages);
   file.close();
 }
 
@@ -302,56 +293,41 @@ void setup() {
 #endif
 
   WIFI();
-  izbrani_dan = spiffs_boot();
-  //SPIFF2BUFF(SPIFFS, imena_dir[izbrani_dan]);
-  SPIFF2BUFF(SPIFFS,slikca);
-  //PrikazSlike();
+  uint8_t update_mby=spiffs_boot(); //ce vrne 0 se datum ni spremenil
+  if(update_mby>0&&update_mby<100)gsheets2spiff();      //če se je datum spremenil updejta sliko:
+  else if(update_mby==0)
+  {
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(0, 0);
+    tft.print("Danasnja");
+    tft.setCursor(0, 40);
+    tft.print("slika je ze");
+    tft.setCursor(0, 60);
+    tft.print("prenesena");
+    tft.setCursor(0, 100);
+    tft.setTextColor(ST77XX_BLUE);
+    tft.print("Prikazujem");
+    delay(2000);
+  }
+  if(update_mby!=100)SPIFF2BUFF(SPIFFS,slikca);
   wifi_off();
-  readFile(SPIFFS,"/slikca.txt");
-/*
-#if DEBUG
-  Serial.println("");
-  for (uint8_t vrstice = 0; vrstice < 160; vrstice++)
-  {
-    for (uint8_t stolpci = 0; stolpci < 120; stolpci++)
-    {
-      Serial.print(img_buffer[vrstice][stolpci]);
-      Serial.print("|");
-    }
-  }
-  Serial.println("konec slike");
-  for (uint8_t txt = 0; txt < 4; txt++)
-  {
-    Serial.println(text_buffer[txt]);
-  }
-#endif
-*/
-
 }
 
 void loop() {
 if(tipka_change==1)
-{ tipka_change=0;
-  if(tipka>(current_text_pages))tipka=0;
-  if(tipka==0)PrikazSlike();
-  else PrikazTexta(tipka-1);
-  if(tipka>6)tipka=0;
-  //SPIFF2BUFF(SPIFFS, imena_dir[tipka]);
-  //PrikazSlike();
+  { tipka_change=0;
+    if(tipka>(current_text_pages))tipka=0;
+    if(tipka==0)PrikazSlike();
+    else PrikazTexta(tipka-1);
+    if(tipka>6)tipka=0;
+  }
 }
 
+uint8_t spiffs_boot(void)
+{uint8_t date_state = 0;
 
-}
-
-uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
-{ uint8_t state_code = 0;
-  /*
-    0= neutral
-    1= new/formated
-    2= ready to read
-  */
   if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
-#if DEBUG
+#if DEBUG_EXTRA
     Serial.println("SPIFFS Mount Failed");
 #endif
     spiffs_flag = 0;
@@ -369,10 +345,9 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
     { //ce ni log.txt filea se ga naredi.
       //Torej je nov boot in se naredi tud slike na novo
       writeFile(SPIFFS, "/log.txt");
-#if DEBUG
+#if DEBUG_EXTRA
       Serial.println("naredu log");
 #endif
-      state_code = 1;
     }
     else
     { //če log.txt obstaja ga resetiraš, pred tem primerjaš datume
@@ -392,9 +367,7 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
         date_info[5] = (timeinfo.tm_year) / 100 - 1;
         date_info[6] = ((timeinfo.tm_year) % 100) / 10;
         date_info[7] = (((timeinfo.tm_year) % 100) % 10);
-        //date_info[8]=timeinfo.tm_year-date_info[5]-date_info[6]-date_info[7];
-        //Serial.println(date_info[0]);
-        uint8_t date_state = 0;
+        
         for (uint8_t date_check = 0; date_check < 8; date_check++)
         {
           String cifra = readFile1Char(SPIFFS, "/log.txt", date_check);
@@ -410,25 +383,53 @@ uint8_t spiffs_boot(void) //VRNE cifro za SLIKO/TEXT ZA PRIKAZ
       writeFile(SPIFFS, "/log.txt");
       appendFile(SPIFFS, "/log.txt", String(vsota_datum));
       }
-      else date_info[0]=readFile1Char(SPIFFS,"/log.txt",0).toInt();
-
-/*      for (uint8_t name_list; name_list < NUM_DAYS; name_list++)
+      else 
       {
-        if (!availableFile(SPIFFS, imena_dir[name_list])) {
-          writeFile(SPIFFS, imena_dir[name_list]);
-        }
-      }*/
-
+        tft.fillScreen(ST77XX_BLACK);
+        tft.setCursor(0, 0);
+        tft.print("Nimam wifi");
+        tft.setCursor(0, 40);
+        tft.setTextColor(ST77XX_BLUE);
+        tft.print("Prikazujem");
+        tft.setCursor(0, 80);
+        tft.print("Staro sliko");
+        delay(2000);
+        //date_info[0]=readFile1Char(SPIFFS,"/log.txt",0).toInt();
+      }
+      bool fresh_pic_spiffs=0;
       if (!availableFile(SPIFFS, slikca)) {
-          writeFile(SPIFFS,slikca);}
+          writeFile(SPIFFS,slikca);
+          fresh_pic_spiffs=1;}
 
-      //če se je datum spremenil in je ponedeljek, updejta nabor:
-      /*if(date_state!=0 && date_info[0]==0)*/gsheets2spiff();
+      if((WiFi.status() != WL_CONNECTED)&&(fresh_pic_spiffs==1))
+      {
+        tft.fillScreen(ST77XX_BLACK);
+        tft.setCursor(0, 0);
+        tft.print("Nimam slike");
+        tft.setCursor(0, 40);
+        tft.print("Nimam wifi");
+        tft.setCursor(0, 60);
+        tft.setTextColor(ST77XX_BLUE);
+        tft.print("Resetiraj");
+        tft.setCursor(0, 80);
+        tft.print("Napravo");
+        delay(3000);
+      }
 
-      return date_info[0];
+      return date_state!=0;
     }
-    return 10;
   }
+  #if DEBUG_EXTRA
+  Serial.println("Spiffs zajeb");
+  #endif
+
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setCursor(0, 0);
+  tft.print("Resetiraj");
+  tft.setCursor(0, 40);
+  tft.print("napravo");
+  
+  return 100;
 }
 
 
@@ -449,23 +450,32 @@ bool WIFI()
   while ((WiFi.status() != WL_CONNECTED) && (wifi_attempt < 5)) {
     delay(500);
     wifi_attempt++;
-    //Serial.print(".");
   }
   wifi_attempt = 0;
   if (WiFi.status() != WL_CONNECTED)
   {
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setCursor(0, 0);
+  tft.print("Naredi");
   tft.setCursor(0, 20);
   tft.print("Hotspot");
   tft.setCursor(0, 40);
-  tft.print("ime: Linc");
+  tft.print("ime:");
   tft.setCursor(0, 60);
-  tft.print("geslo:PINC");
-  
+  tft.setTextColor(ST77XX_GREEN);
+  tft.print("Lincica"); 
+  tft.setCursor(0, 80);
+  tft.setTextColor(ST77XX_RED);
+  tft.print("geslo:");
+  tft.setTextColor(ST77XX_GREEN);
+  tft.setCursor(0, 100);
+  tft.print("inlinc");
+  delay(2000);
+    
     WiFi.begin(ssid_hotspot, password_hotspot);
     while ((WiFi.status() != WL_CONNECTED) && (wifi_attempt < 5)) {
       delay(500);
       wifi_attempt++;
-      //Serial.print(".");
     }
     if (WiFi.status() == WL_CONNECTED)wifi_success = 1;
   }
@@ -483,19 +493,15 @@ void gsheets2spiff(void)//TEST
   HTTPClient http;
   const String url = "https://script.google.com/macros/s/" + GOOGLE_SCRIPT_ID + "/exec?read";
 
-//zakomentirano da louda samo 1 sliko za 1 dan
- // for (uint8_t slika_no = 0; slika_no < 7; slika_no++)
- // { //sheets sam ve kaj ti mora podat
-    //deleteFile(SPIFFS, imena_dir[izbrani_dan]);
-    //writeFile(SPIFFS, imena_dir[izbrani_dan]);
-
     if (WiFi.status() == WL_CONNECTED)
     {
     tft.fillScreen(ST77XX_BLACK);
     tft.setCursor(0, 0);
-    tft.print("LoudaSliko");  
+    tft.print("Louda");
+    tft.setCursor(0, 40);
+    tft.print("Sliko");  
     deleteFile(SPIFFS,slikca);
-    writeFile(SPIFFS, slikca);
+    writeFile(SPIFFS,slikca);
     for (int slika_vrstica = 0; slika_vrstica < 4; slika_vrstica++)
     {
       http.begin(url.c_str()); //Specify the URL and certificate
@@ -504,19 +510,13 @@ void gsheets2spiff(void)//TEST
       int httpCode = 0;
       httpCode = http.GET();
       Serial.print("Pobral file dolg:");
-        //ZAFUK VRJETNO TUKAJ
       if (httpCode > 0) { //Check for the returning code
         payload = http.getString();
         uint32_t substring_length = 500;
         Serial.println(payload.length());
         for (uint32_t sub = 0; sub < ((payload.length() / substring_length) + 1); sub++)
-        { appendFile(SPIFFS, /*imena_dir[izbrani_dan]*/ slikca, payload.substring(sub * substring_length, (sub + 1)*substring_length));
-/*
-          #if DEBUG
-          Serial.print(sub); Serial.print(" ");
-          Serial.print(payload.substring(sub * substring_length, (sub + 1)*substring_length));
-          Serial.println(" ");
-          #endif*/
+        { 
+          appendFile(SPIFFS, slikca, payload.substring(sub * substring_length, (sub + 1)*substring_length));
         }
 
       }
@@ -533,10 +533,9 @@ void gsheets2spiff(void)//TEST
     tft.fillScreen(ST77XX_BLACK);
     tft.setCursor(0, 0);
     tft.print("Ni Wifija");
-    tft.setCursor(0, 20);
+    tft.setCursor(0, 40);
     tft.print("za loudat"); 
     }
-  //}
 }
 
 
@@ -577,7 +576,6 @@ void PrikazTexta(uint8_t page)
   tft.setTextSize(2);
   tft.setTextWrap(true);
   tft.setCursor(0, 0);
-  //char text[] = text_buffer[page];
   for(uint16_t i=0;i<MAX_CHAR_AT_ONCE;i++)
   {
 
