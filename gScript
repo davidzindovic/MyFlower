@@ -17,9 +17,6 @@ function doPost(e)
 {
   var val = e.parameter.value;
   
- // if (e.parameter.value !== undefined){
- //   var range = sheet.getRange('A2');
- //   range.setValue(val);
   
     var range = promet.getRange('A1');
     range.setValue(val);
@@ -28,51 +25,45 @@ function doPost(e)
 
 function doGet(e)
 {
-  //var read = e.parameter.read;
 
   var sheet=sheets[promet.getRange('C2').getValue()-1];
 
-  var range = sheet.getRange('A9');
-  var vrednost = sheet.getRange('A9').getValue();
-
-  //if(vrednost==(sheet.getRange('A14').getValue()-1))
-  //{
-  //  range.setValue(-1); //zato da bo inkrementirana vrednost 0 -> začetek
-  //  sheet.getRange('A11').setValue(1); //da vemo da je zadeva dokončala obdelavo
-  //}
   
-  if((sheet.getRange('A11').getValue()!==1)||promet.getRange('A1').getValue()==0) //ce je error code takoj se enkrat pobere
+  if((sheet.getRange('A17').getValue()!==1)||promet.getRange('A1').getValue()==0) //ce je error code takoj se enkrat pobere
   {
-    sheet.getRange('A11').setValue(1);
-    promet.getRange('A1').setValue(5); //resetas zadevo
-    //if (read !== undefined)
-    //{
-      //return ContentService.createTextOutput(sheet.getRange('H'+(sheet.getRange('A3').getValue()+16)).getValue());
+    sheet.getRange('A17').setValue(1);
+    promet.getRange('A1').setValue(6); //resetas zadevo
+
       return ContentService.createTextOutput(sheet.getRange('H17').getValue());
-    //}
+
   }
-  else if((sheet.getRange('A11').getValue()==1 && sheet.getRange('A18').getValue()==0)||promet.getRange('A1').getValue()==1)
+  else if((sheet.getRange('A17').getValue()==1 && sheet.getRange('A18').getValue()==0)||promet.getRange('A1').getValue()==1)
   {
     sheet.getRange('A18').setValue(1);
-    promet.getRange('A1').setValue(5); //resetas zadevo
-    //if (read !== undefined)
-    //{
-      //return ContentService.createTextOutput(sheet.getRange('H'+(sheet.getRange('A3').getValue()+16)).getValue());
+    promet.getRange('A1').setValue(6); //resetas zadevo
+
       return ContentService.createTextOutput(sheet.getRange('H18').getValue());
-    //}
+
   }
   else if((sheet.getRange('A18').getValue()==1 && sheet.getRange('A19').getValue()==0)||promet.getRange('A1').getValue()==2)
   {
     sheet.getRange('A19').setValue(1);
-    promet.getRange('A1').setValue(5); //resetas zadevo
+    promet.getRange('A1').setValue(6); //resetas zadevo
     return ContentService.createTextOutput(sheet.getRange('H19').getValue());
   }
   else if((sheet.getRange('A19').getValue()==1 && sheet.getRange('A20').getValue()==0)||promet.getRange('A1').getValue()==3)
   {
     sheet.getRange('A20').setValue(1);
-    promet.getRange('A1').setValue(5); //resetas zadevo
-    //promet.getRange('A1').setValue(promet.getRange('A1').getValue()+1);
+    promet.getRange('A1').setValue(6); //resetas zadevo
+
     return ContentService.createTextOutput(sheet.getRange('H20').getValue());
+  }
+  else if((sheet.getRange('A20').getValue()==1 && sheet.getRange('A21').getValue()==0)||promet.getRange('A1').getValue()==4)
+  {
+    sheet.getRange('A21').setValue(1);
+    promet.getRange('A1').setValue(6); //resetas zadevo
+
+    return ContentService.createTextOutput(sheet.getRange('H21').getValue());
   }
   else
   { //če naprava poskuša prebrati ampak gSheets nima več nič za povedat
