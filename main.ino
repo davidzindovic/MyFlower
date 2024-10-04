@@ -1,7 +1,3 @@
-/*to do
-  -preveri datum in user izpise na display ob bootu
-  - če nima neta - pravilno naložen datum - ista zadeva iz spiffa
-*/
 
 #define DEBUG 1
 #define DEBUG_EXTRA 0
@@ -23,11 +19,10 @@
 const char * ssid_hotspot = "Lincica";
 const char * password_hotspot = "inlincnik";
 
-//AirTies_Air4920_844H
 const char * ssid_home = "AirTies_Air4920_844H";
 const char * password_home = "phpmcy3979";
 
-const String GOOGLE_SCRIPT_ID = "AKfycbwW8Bk7frI58Tzhnm2NXCpCEH5Yp2qvRjX4oouHivVn3EPQfRtJFsYgIBNAMNPWTYsV";
+const String GOOGLE_SCRIPT_ID = "AKfycbwvRNbdNFXxtIll2T0m9kzv8zkASAEKD9vyG68Z9dIwQiWqmVfyYeHGSC8wGAuipQsU";
 
 const int sendInterval = 100;
 /* KONEC USER CHANGES */
@@ -58,6 +53,7 @@ const String spif_log = "/log.txt";
 #define NUM_COL 128
 
 uint16_t img_buffer[NUM_ROW + 1][NUM_COL + 1];
+#define NUM_PARTS_SLIKE 5
 
 #define MAX_CHAR_AT_ONCE 100
 #define MAX_TEXT_SPLITS 4
@@ -94,16 +90,13 @@ void IRAM_ATTR isr()
   timek = millis();
 }
 
-bool readFile(fs::FS &fs, /*const char * */ String path) {
-  //Serial.printf("Reading file: %s\r\n", path);
+bool readFile(fs::FS &fs, String path) {
   bool fail = 0;
   File file = fs.open(path);
   if (!file || file.isDirectory()) {
-    //Serial.println("- failed to open file for reading");
     return fail;
   }
 
-  //Serial.println("- read from file:");
   while (file.available()) {
     Serial.write(file.read());
   }
@@ -113,7 +106,6 @@ bool readFile(fs::FS &fs, /*const char * */ String path) {
 }
 
 String readFile1Char(fs::FS &fs, const char *path, uint8_t which_char) {
-  //Serial.printf("Reading file: %s\r\n", path);
   bool fail = 0;
   File file = fs.open(path);
   while (!file || file.isDirectory()) {
@@ -122,14 +114,11 @@ String readFile1Char(fs::FS &fs, const char *path, uint8_t which_char) {
   }
   String znak = "";
 
-  //while(znak=="")
-  //{
   if (file.available()) {
     for (uint8_t bruh = 0; bruh < which_char; bruh++)file.read();
     znak = file.read();
     file.close();
   }
-  //}
   else
   {
     return "H";
@@ -138,30 +127,24 @@ String readFile1Char(fs::FS &fs, const char *path, uint8_t which_char) {
   return znak;
 }
 
-void writeFile(fs::FS &fs, /*const char * */ String path) {//, /*const char * */String message
-  //Serial.printf("Writing file: %s\r\n", path);
+void writeFile(fs::FS &fs, String path) {
 
   File file = fs.open(path, FILE_WRITE);
   if (!file) {
-    //Serial.println("- failed to open file for writing");
     return;
   }
 
   file.close();
 }
 
-void appendFile(fs::FS &fs, /*const char * */ String path, String message) {
-  //Serial.printf("Appending to file: %s\r\n", path);
+void appendFile(fs::FS &fs, String path, String message) {
 
   File file = fs.open(path, FILE_APPEND);
   if (!file) {
-    //Serial.println("- failed to open file for appending");
     return;
   }
   if (file.print(message)) {
-    //Serial.println("- message appended");
   } else {
-    //Serial.println("- append failed");
   }
   file.close();
 }
@@ -192,7 +175,7 @@ bool availableFile(fs::FS &fs, String path)
   }
 }
 void SPIFF2BUFF(fs::FS &fs, String path)//TEST
-{ //Serial.println(path);
+{ 
   File file = fs.open(path);
   if (!file || file.isDirectory()) {
     return;
@@ -215,7 +198,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
     if ((((temp - '0') <= 9) || ((temp - 'a') <= 5) || (temp == 'x')) && (temp != 'Y'))
     {
       #if DEBUG_EXTRA
-      Serial.print(col); Serial.print(" "); Serial.print(row); Serial.print(" "); Serial.println(temp);// Serial.print(" "); Serial.println(temp2);
+      Serial.print(col); Serial.print(" "); Serial.print(row); Serial.print(" "); Serial.println(temp);
       #endif
       
       if (col == (NUM_COL-1))
@@ -306,8 +289,10 @@ void setup() {
     tft.setCursor(0, 0);
     tft.print("Danasnja");
     tft.setCursor(0, 20);
-    tft.print("slika je ze");
+    tft.print("slika");
     tft.setCursor(0, 40);
+    tft.print("je ze");
+    tft.setCursor(0, 60);
     tft.print("prenesena");
     tft.setCursor(0, 80);
     tft.setTextColor(ST77XX_BLUE);
@@ -511,7 +496,7 @@ void gsheets2spiff(void)//TEST
     tft.print("Sliko");  
     deleteFile(SPIFFS,slikca);
     writeFile(SPIFFS,slikca);
-    for (int slika_vrstica = 0; slika_vrstica < 4; slika_vrstica++)
+    for (int slika_vrstica = 0; slika_vrstica < NUM_PARTS_SLIKE; slika_vrstica++)
     {
       http.begin(url.c_str()); //Specify the URL and certificate
       http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
