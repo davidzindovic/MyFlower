@@ -1,5 +1,5 @@
 
-#define DEBUG 1
+#define DEBUG 0
 #define DEBUG_EXTRA 0
 
 #include <WiFi.h>
@@ -22,7 +22,7 @@ const char * password_hotspot = "inlincnik";
 const char * ssid_home = "AirTies_Air4920_844H";
 const char * password_home = "phpmcy3979";
 
-const String GOOGLE_SCRIPT_ID = "AKfycbwvRNbdNFXxtIll2T0m9kzv8zkASAEKD9vyG68Z9dIwQiWqmVfyYeHGSC8wGAuipQsU";
+const String GOOGLE_SCRIPT_ID = "AKfycby_4va09_qYUCze3cwfkT5aQeSjw8uSs2n5UBpIPokcSbSvVQitVcZoLKlDdHaTFasM";
 
 const int sendInterval = 100;
 /* KONEC USER CHANGES */
@@ -56,7 +56,7 @@ uint16_t img_buffer[NUM_ROW + 1][NUM_COL + 1];
 #define NUM_PARTS_SLIKE 5
 
 #define MAX_CHAR_AT_ONCE 100
-#define MAX_TEXT_SPLITS 4
+#define MAX_TEXT_SPLITS 6
 String text_buffer[MAX_TEXT_SPLITS];
 uint8_t current_text_pages=0;
 uint16_t text_char_count=0;
@@ -77,6 +77,7 @@ const int   daylightOffset_sec = 3600;
 bool spiffs_flag = 1;
 //pazi ker je sou path iz const char * -> String
 #define FORMAT_SPIFFS_IF_FAILED true
+uint32_t ELEMENTS_IN_BUFF=0;
 /*    KONEC SPIFFS    */
 
 //---------------------------------------------------------
@@ -150,11 +151,17 @@ void appendFile(fs::FS &fs, String path, String message) {
 }
 
 void deleteFile(fs::FS &fs, String path) {
+  #if DEBUG_EXTRA
   Serial.printf("Deleting file: %s\r\n", path);
+  #endif
   if (fs.remove(path)) {
+    #if DEBUG_EXTRA
     Serial.println("- file deleted");
+    #endif
   } else {
+    #if DEBUG_EXTRA
     Serial.println("- delete failed");
+    #endif
   }
 }
 
@@ -216,6 +223,7 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
         if (char_count == 4)
         {
           img_buffer[row][col] = string2header(beseda);
+          ELEMENTS_IN_BUFF++;
           col++;
           beseda = "";
           str_rdy = 0;
@@ -282,7 +290,7 @@ void setup() {
   {
   WIFI();
   uint8_t update_mby=spiffs_boot(); //ce vrne 0 se datum ni spremenil
-  if(update_mby>0&&update_mby<100)gsheets2spiff();      //če se je datum spremenil updejta sliko:
+  if((update_mby>0&&update_mby<100)&& (WiFi.status() == WL_CONNECTED))gsheets2spiff();      //če se je datum spremenil updejta sliko
   else if(update_mby==0 && (WiFi.status() == WL_CONNECTED))
   {
     tft.fillScreen(ST77XX_BLACK);
@@ -300,6 +308,7 @@ void setup() {
     delay(2000);
   }
   if(update_mby!=100)SPIFF2BUFF(SPIFFS,slikca);
+  else{while(1){}}
   wifi_off();
   }
   else 
@@ -315,7 +324,7 @@ if(tipka_change==1)
     if(tipka>(current_text_pages))tipka=0;
     if(tipka==0)PrikazSlike();
     else PrikazTexta(tipka-1);
-    if(tipka>6)tipka=0;
+    if(tipka>MAX_TEXT_SPLITS)tipka=0;
   }
 }
 
@@ -341,9 +350,9 @@ uint8_t spiffs_boot(void)
     { //ce ni log.txt filea se ga naredi.
       //Torej je nov boot in se naredi tud slike na novo
       writeFile(SPIFFS, "/log.txt");
-#if DEBUG_EXTRA
+    #if DEBUG_EXTRA
       Serial.println("naredu log");
-#endif
+    #endif
     }
     else
     { //če log.txt obstaja ga resetiraš, pred tem primerjaš datume
@@ -503,11 +512,19 @@ void gsheets2spiff(void)//TEST
       String payload;
       int httpCode = 0;
       httpCode = http.GET();
+      
+      #if DEBUG_EXTRA
       Serial.print("Pobral file dolg:");
+      #endif
+      
       if (httpCode > 0) { //Check for the returning code
         payload = http.getString();
         uint32_t substring_length = 500;
+        
+        #if DEBUG_EXTRA
         Serial.println(payload.length());
+        #endif
+
         for (uint32_t sub = 0; sub < ((payload.length() / substring_length) + 1); sub++)
         { 
           appendFile(SPIFFS, slikca, payload.substring(sub * substring_length, (sub + 1)*substring_length));
@@ -515,7 +532,11 @@ void gsheets2spiff(void)//TEST
 
       }
       else { //ne bi smelo priti do tega
+      
+      #if DEBUG_EXTRA
       Serial.println("Error on HTTP request");
+      #endif
+      
       http.POST(String(slika_vrstica));
       slika_vrstica--;
       }
@@ -554,11 +575,17 @@ void PrikazSlike(void)
 { tft.fillScreen(ST77XX_BLACK);
   tft.setCursor(0, 0);
   uint32_t shift = 0;
+  
+  #if DEBUG_EXTRA
+  Serial.print("Elements in buff: ");
+  Serial.println(ELEMENTS_IN_BUFF);
+  #endif
+  
   for (uint32_t rows = 0 ; rows < NUM_ROW; rows++)
   {
     for (uint32_t cols = 0 ; cols < NUM_COL; cols++)
     {
-      tft.drawPixel(cols + shift,rows + shift, img_buffer[rows][cols] );
+      if((rows*NUM_COL+cols)<(ELEMENTS_IN_BUFF))tft.drawPixel(cols + shift,rows + shift, img_buffer[rows][cols]);
     }
   }
 }
@@ -572,7 +599,6 @@ void PrikazTexta(uint8_t page)
   tft.setCursor(0, 0);
   for(uint16_t i=0;i<MAX_CHAR_AT_ONCE;i++)
   {
-
     tft.print(text_buffer[page].charAt(i));
   }
 }
