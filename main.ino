@@ -271,9 +271,12 @@ void SPIFF2BUFF(fs::FS &fs, String path)//TEST
 
 void setup() {
   tft.initR(INITR_BLACKTAB);
-  tft.setRotation(0);
+  tft.setRotation(2);
   tft.fillScreen(ST7735_BLACK);
   dacWrite(TFT_LED, 255);
+
+  BatteryCheck();
+  
   tft.setTextColor(ST77XX_RED);
   tft.setTextSize(2);
   tft.setTextWrap(true);
@@ -285,7 +288,7 @@ void setup() {
   Serial.begin(115200);
   delay(10);
 #endif
-
+  
   if(digitalRead(pushButton_pin)!=0)
   {
   WIFI();
@@ -316,6 +319,7 @@ void setup() {
     spiffs_boot();
     SPIFF2BUFF(SPIFFS,slikca);
   }
+
 }
 
 void loop() {
@@ -601,4 +605,29 @@ void PrikazTexta(uint8_t page)
   {
     tft.print(text_buffer[page].charAt(i));
   }
+}
+
+void BatteryCheck()
+{
+  const uint8_t stevilo_vzorcev=10;
+  float kriticna_napetost=3.4;
+  pinMode(A0, INPUT);
+  uint32_t napetost_baterije=0;
+  
+  for(uint8_t i=0;i<stevilo_vzorcev;i++){napetost_baterije+=analogRead(A0);delay(1);}
+  napetost_baterije=napetost_baterije/stevilo_vzorcev;
+  if(napetost_baterije<=(kriticna_napetost/5.0*1023))
+    {
+      tft.fillScreen(ST77XX_BLACK);
+      tft.setTextColor(ST77XX_GREEN);
+      tft.setTextSize(2);
+      tft.setTextWrap(true);
+      tft.setCursor(30, 30);
+      tft.print("Prosim");
+      tft.setCursor(20, 60);
+      tft.print("napolni");
+      tft.setCursor(15, 90);
+      tft.print("baterijo");
+    }
+  delay(2000);
 }
