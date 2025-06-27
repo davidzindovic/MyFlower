@@ -1,6 +1,6 @@
 Darilo za mojo Moniko. Tole je naprava, ki združuje ESP32 in OLED zaslon, da lahko od doma preko Google Sheets uporabnik naloži datoteko in napis, ki jo naprava samodejno prenese, ko dobi povezavo do interneta in lahko zazna spremembo datuma. Sliko beleži v internem spominu (SPIFFS), v kolikor ne bi imela dostopa do interneta. 
 
-<img src="myflower.jpg" width="425"/> <img src="Ohisje_z_baterijo/Assembly2_crop.png" width="425"/> 
+<img src="myflower.jpg" width="425"/> <img src="Ohisje_z_baterijo/Assembly2_crop.png" width="825"/> 
 
 Navodila za uporabo:
 1. Izberi poljubno sliko
