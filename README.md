@@ -2,7 +2,7 @@ Darilo za mojo Moniko. Tole je naprava, ki združuje ESP32 in OLED zaslon, da la
 
 Koncni izdelek             |  Nacrt za ohisje z baterijo
 :-------------------------:|:-------------------------:
-![](myflower.jpg)  |  ![](Ohisje_z_baterijo/Assembly2_crop.png)
+![](myflower.jpg)  |  ![](Ohisje_z_baterijo/Assembly2_cr op.png)
 
 Navodila za uporabo:
 1. Izberi poljubno sliko
