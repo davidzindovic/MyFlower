@@ -470,13 +470,13 @@ bool WIFI()
   tft.print("ime:");
   tft.setCursor(0, 60);
   tft.setTextColor(ST77XX_GREEN);
-  tft.print("Lincica"); 
+  tft.print("neki_ssid"); 
   tft.setCursor(0, 80);
   tft.setTextColor(ST77XX_RED);
   tft.print("geslo:");
   tft.setTextColor(ST77XX_GREEN);
   tft.setCursor(0, 100);
-  tft.print("inlincnik");
+  tft.print("neki_pass");
   delay(2000);
     
     WiFi.begin(ssid_hotspot, password_hotspot);
@@ -631,4 +631,5 @@ void BatteryCheck()
     }
   delay(2000);
 }
+
 
