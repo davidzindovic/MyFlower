@@ -1,4 +1,4 @@
-Darilo za mojo Moniko. Tole je naprava, ki združuje ESP32 in OLED zaslon, da lahko od doma preko Google Sheets uporabnik naloži datoteko in napis, ki jo naprava samodejno prenese, ko dobi povezavo do interneta in lahko zazna spremembo datuma. Sliko beleži v internem spominu (SPIFFS), v kolikor ne bi imela dostopa do interneta. 
+Tole je naprava, ki združuje ESP32 in OLED zaslon, da lahko od doma preko Google Sheets uporabnik naloži datoteko in napis, ki jo naprava samodejno prenese, ko dobi povezavo do interneta in lahko zazna spremembo datuma. Sliko beleži v internem spominu (SPIFFS), v kolikor ne bi imela dostopa do interneta. 
 
 Koncni izdelek             |  Nacrt za ohisje z baterijo
 :-------------------------:|:-------------------------:
