@@ -16,8 +16,8 @@
 
 /*Things to change */
 
-const char * ssid_hotspot = "Lincica";
-const char * password_hotspot = "inlincnik";
+const char * ssid_hotspot = "neki_ssid";
+const char * password_hotspot = "neki_pass";
 
 const char * ssid_home = "AirTies_Air4920_844H";
 const char * password_home = "phpmcy3979";
@@ -631,3 +631,4 @@ void BatteryCheck()
     }
   delay(2000);
 }
+
